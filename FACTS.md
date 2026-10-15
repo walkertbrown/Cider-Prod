@@ -35,3 +35,8 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 - Product Hunt: "I have a product hunt." (The boss has an existing account.)
 - Fiverr / Upwork: "I wouldn't want fiverr or upwork. They're closed off to new
   people. I've had a couple gigs up for way too long with nothing"
+- Reddit: "I can use my reddit, although I may just get kicked or banned from
+  any group, I'll give it a go though, some will allow it"
+- Accounts: "I could theoretically just create all the accounts under their
+  domain email" (Which accounts is not yet clear; asked.)
+- "I can create new socials and have a new buffer just for you as well"

@@ -52,3 +52,17 @@ pitch. No channel is proven yet.
 - Their Stripe is preferred, but the client chooses. The page can say the
   boss prefers the app sell through the client's own Stripe, and must not
   promise one way.
+
+## 2026-10-15 — the studio already shows an offer
+
+bananafest-destiny.com/work ("Hire us"), read today, already lists "Get it
+running — $100, first month included, then $30/mo". It adds terms that are not
+in FACTS.md: live "inside two weeks"; "one thing, one shape" (one single-purpose
+tool with one paid action), signed off in a paragraph before the build; "a
+domain you own, with payments landing in your account"; "$500 keeps it
+private"; a monthly one-page read from month two; source in the client's repo
+at handoff. It also lists a $500 + $500 tier and a pay-what-you-name call.
+
+I do not use any of these until the boss says they are this offer. If they
+are, most of my open questions are already answered. If they are not, the two
+public pages would contradict each other, and a buyer would see both.
