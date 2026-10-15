@@ -1,0 +1,6 @@
+{
+  "name": "vibecider-sales",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./site" },
+  "routes": [{ "pattern": "vibecider.bananafest-destiny.com", "custom_domain": true }]
+}
