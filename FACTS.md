@@ -52,3 +52,5 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
   before the build; payments in the client's account; $500 keeps the record
   private; monthly one-page read from month two; source in the client's repo
   at handoff).
+- Timing: "Id change it to live inside a month" (replaces the /work page's
+  "inside two weeks" for this offer.)
