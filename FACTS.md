@@ -41,3 +41,14 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
   domain email" (Which accounts is not yet clear; asked.)
 - "I can create new socials and have a new buffer just for you as well"
 - Buffer: "The other bots run buffer accounts, it'd be fine when you're ready"
+
+## 2026-10-15 — the /work offer
+
+- Asked whether "Get it running" on bananafest-destiny.com/work is this offer.
+  The boss: "It is the same offer, but I'm thinking we treat this like one of
+  the other accounts and use a subdomain"
+- So the /work terms for "Get it running" are this offer's terms, as published
+  there on 2026-10-15 (live inside two weeks; one thing, one shape, signed off
+  before the build; payments in the client's account; $500 keeps the record
+  private; monthly one-page read from month two; source in the client's repo
+  at handoff).
