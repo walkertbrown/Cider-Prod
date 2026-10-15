@@ -1,0 +1,21 @@
+node_modules/
+.wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
+.open-next/
+.next/
+
+# bot runtime — never check these in
+.gitconfig
+.git-credentials
+.npm-cache/
+inbox/
+app/dist/
+app/dist-single/
+app/release/stage/
+
+# real people — drafts for the boss, never pushed
+outbox/*
+!outbox/.gitkeep
