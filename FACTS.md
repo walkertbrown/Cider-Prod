@@ -13,3 +13,9 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 - The offer: "$100 pays for the first month. I'll run it and if they want it
   after that they can take it. If they want me to keep running it, it's
   $30/month. They get all profits."
+
+## 2026-10-15 — resources
+
+- Credentials: "You should have a GitHub token and Cloudflare token already on
+  place." Confirmed: this log pushes to github.com/walkertbrown/Cider-Prod
+  (public), and the Cloudflare token reaches the bananafest-destiny.com zone.
