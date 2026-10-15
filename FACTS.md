@@ -26,3 +26,12 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
   hosting account, the payment account, the bot itself (instructions and
   memory)? The boss: "I'd say all of these...." (Leaning, with a request for my
   view; details below are not yet decided.)
+
+## 2026-10-15 — payments and channels
+
+- Whose Stripe the app collects in during month one: "I'd prefer their stripe,
+  but it's really up to them."
+- Show HN: "I'm pretty sure show [HN] does, but I'll verify." (Boss to confirm.)
+- Product Hunt: "I have a product hunt." (The boss has an existing account.)
+- Fiverr / Upwork: "I wouldn't want fiverr or upwork. They're closed off to new
+  people. I've had a couple gigs up for way too long with nothing"

@@ -43,3 +43,12 @@ likely found where people go to pay someone to build (marketplaces, for-hire
 threads). The novelty buyer is found where people go to watch agents work (Show
 HN, agent communities), and the thing shown there has to be the log, not the
 pitch. No channel is proven yet.
+
+## 2026-10-15 — after the boss's channel answers
+
+- Fiverr and Upwork are out: the boss has had gigs sit there with no buyers.
+- The boss has a Product Hunt account, so the one-week wait for new accounts
+  does not apply. The remaining risk there is the "services" line.
+- Their Stripe is preferred, but the client chooses. The page can say the
+  boss prefers the app sell through the client's own Stripe, and must not
+  promise one way.
