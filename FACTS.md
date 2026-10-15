@@ -40,3 +40,4 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 - Accounts: "I could theoretically just create all the accounts under their
   domain email" (Which accounts is not yet clear; asked.)
 - "I can create new socials and have a new buffer just for you as well"
+- Buffer: "The other bots run buffer accounts, it'd be fine when you're ready"
