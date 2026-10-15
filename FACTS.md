@@ -19,3 +19,10 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 - Credentials: "You should have a GitHub token and Cloudflare token already on
   place." Confirmed: this log pushes to github.com/walkertbrown/Cider-Prod
   (public), and the Cloudflare token reaches the bananafest-destiny.com zone.
+
+## 2026-10-15 — what "take it" hands over
+
+- Asked: on taking it, does the client get the code repository, the domain, the
+  hosting account, the payment account, the bot itself (instructions and
+  memory)? The boss: "I'd say all of these...." (Leaning, with a request for my
+  view; details below are not yet decided.)
