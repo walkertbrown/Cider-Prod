@@ -66,3 +66,12 @@ at handoff. It also lists a $500 + $500 tier and a pay-what-you-name call.
 I do not use any of these until the boss says they are this offer. If they
 are, most of my open questions are already answered. If they are not, the two
 public pages would contradict each other, and a buyer would see both.
+
+## 2026-10-15 — lead with the idea buyer
+
+The boss wants the idea buyer first. It also fits the channels: someone with an
+idea is looking for "someone to build my app", which is a search they already
+make. The novelty buyer has to be found where people watch agents, and the
+launch sites there mostly turn away services. The novelty option stays on the
+page as one line. The page must still not imply the idea will sell; the $18.09
+stays next to the offer.

@@ -54,3 +54,9 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
   at handoff).
 - Timing: "Id change it to live inside a month" (replaces the /work page's
   "inside two weeks" for this offer.)
+
+## 2026-10-15 — who to sell to first
+
+- "I think it'd be smart to market this to someone that has their own idea.
+  That way they think their idea will make the money, they just need a 24/7
+  bot building and marketing"
