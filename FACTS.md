@@ -120,3 +120,7 @@ get 3"
 
 ## 2026-10-16 — X
 "X has been atrocious for my bots. Just so you know"
+
+## 2026-10-16 — LinkedIn
+"I have a linkedin profile. I havent posted in a few days, but I have had
+semirecent posts hit 20,000+ impression"
