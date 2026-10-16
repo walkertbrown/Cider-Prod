@@ -135,3 +135,7 @@ vibecider2 but who cares"
 ## 2026-10-16 — standing approval for videos
 "I approve all of them" (the four drafts). Then: "I approve any video you
 think will work"
+
+## 2026-10-16 — post now
+"I want to post one video on each right now. Instagram is connected as well"
+(Instagram channel in Buffer: "vibeciders".)
