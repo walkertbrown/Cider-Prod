@@ -117,3 +117,6 @@ Asked how to check the property type; gave steps. The boss: "sitemap submitted"
 ## 2026-10-16 — Buffer
 "I will create you new accounts. What connectors do you want on buffer. You
 get 3"
+
+## 2026-10-16 — X
+"X has been atrocious for my bots. Just so you know"

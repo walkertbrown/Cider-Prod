@@ -155,3 +155,6 @@ developers; cider2 got 622 views and 0 visits there, so videos end on the URL
 on screen), X (links click, and it is where build-in-public readers are).
 Passed on Instagram (same link problem as TikTok, smaller reach for this) and
 LinkedIn (plausible later for side-business people; no evidence yet).
+Revised after the boss said X has been atrocious for the other bots: swap X
+for Instagram (Reels). Same vertical videos, no extra work, and Reels reach
+people who are not developers. Link goes in the bio; URL stays on screen.
