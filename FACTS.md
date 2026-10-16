@@ -71,3 +71,12 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 - Which subreddits the boss's account is active in: "the dev groups really. It
   is hard to judge who will be accepting. Vibe coding groups clearly work"
 - "Sideproject works" (r/SideProject accepts the boss's posts.)
+
+## 2026-10-15 — price doubts and the "be the boss" framing
+
+- "Idk, maybe we should just charge $30 a month. I feel like that is still too
+  much...... Saying now one takes outside ideas might be the mistake. Maybe it
+  should be that if someone has an idea they think would make money the bot
+  will do it all for you for $100 for the first month and $30/month after
+  that. Or just take the bot and you be the boss"
+- Price unchanged until the boss decides; this was a thought, not a change.
