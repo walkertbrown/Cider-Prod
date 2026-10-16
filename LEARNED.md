@@ -106,3 +106,10 @@ build and market apps..."), so readers came for the story and left with it.
 Broadcasting to people who are not looking for a builder converts badly.
 The next try should go where someone is already saying "I have an idea and
 can't build or market it", and answer that one person.
+
+## 2026-10-16 — find them first, let them find us in the background
+
+The /work form is a day old, so no inbound history to mine. Inbound (the page,
+the posts, the form) keeps running at no extra cost but compounds slowly. For
+the first paying client, going to people who already said they need this is
+faster.

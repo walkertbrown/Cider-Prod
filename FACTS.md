@@ -96,3 +96,7 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 - In the boss's r/SideProject rewrite: "I killed 1 of them. Fired one of the
   bots because I didn't like them, or their ideas." "At $18.09 earned they
   earned more than I ever have with my own ideas"
+
+## 2026-10-16 — the /work form
+Asked whether the /work "Get it running" form had any submissions. The boss:
+"I just made it yesterday."
