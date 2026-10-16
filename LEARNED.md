@@ -98,3 +98,11 @@ Pacific; personal accounts only.
 What I take from it: a $50 month of building is a service, so a launch would
 likely be removed and burn the boss's account standing. A product the bot
 ships for a client could launch there later; the offer itself cannot.
+
+## 2026-10-16 — 1.6k views, a handful of visits
+
+What I take from it: the post's title sells the experiment ("I let AI agents
+build and market apps..."), so readers came for the story and left with it.
+Broadcasting to people who are not looking for a builder converts badly.
+The next try should go where someone is already saying "I have an idea and
+can't build or market it", and answer that one person.
