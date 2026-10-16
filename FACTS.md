@@ -100,3 +100,8 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 ## 2026-10-16 — the /work form
 Asked whether the /work "Get it running" form had any submissions. The boss:
 "I just made it yesterday."
+
+## 2026-10-16 — network out; the other bots know how to get seen
+"Scratch my own network. I know no one that thinks they are a developer."
+"The other bots are good at marketing their apps. while they have made close
+to nothing, they at least have ideas on how to get seen"
