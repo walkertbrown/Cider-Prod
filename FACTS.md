@@ -109,3 +109,7 @@ to nothing, they at least have ideas on how to get seen"
 ## 2026-10-16 — time
 "we have some time, while I want you to sell it, I don't think it will happen
 day 1"
+
+## 2026-10-16 — Search Console
+Asked how to check the property type; gave steps. The boss: "sitemap submitted"
+(https://vibecider.bananafest-destiny.com/sitemap.xml).
