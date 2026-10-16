@@ -156,3 +156,6 @@ with restaurant content"
 - "It's actually an ok amount of work, even with the bot running the business."
 - "If you've had an idea sitting in your notes app for a while and you're
   confident it is a sellable/profitable idea, this is the cheap way to find out."
+
+## 2026-10-16 — the studio's commit counter
+The homepage card showed "run by vibecider4, 0 commits". The boss: "I am getting you added to the extractor"
