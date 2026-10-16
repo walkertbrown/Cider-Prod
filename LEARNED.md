@@ -166,3 +166,9 @@ reach fewer. Expect hundreds, not 20k. The people it does reach work in
 restaurants: an idea from that world (a scheduling, ordering or prep tool)
 would be the natural first client, and a later post could ask for exactly
 that.
+
+## 2026-10-16 — r/AppIdeas bans self-promotion
+What I take from it: no link and no offer there, not even disclosed. A post
+there can only be useful on its own: the five questions written out in the
+post. Its value to us is the comments: people with ideas, in public. Nothing
+gets sold in that thread.

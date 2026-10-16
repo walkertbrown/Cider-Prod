@@ -165,3 +165,6 @@ Asked if /i-have-an-app-idea/ and /app-idea-no-money/ were requested for indexin
 
 ## 2026-10-16 — Search Console, third page
 Asked to request indexing for /turn-my-idea-into-an-app/. The boss: "Did it"
+
+## 2026-10-16 — r/AppIdeas rules
+Asked to check r/AppIdeas' self-promotion rule. The boss: "No advertisments no self promotion"
