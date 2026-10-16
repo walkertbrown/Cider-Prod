@@ -70,3 +70,4 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 
 - Which subreddits the boss's account is active in: "the dev groups really. It
   is hard to judge who will be accepting. Vibe coding groups clearly work"
+- "Sideproject works" (r/SideProject accepts the boss's posts.)
