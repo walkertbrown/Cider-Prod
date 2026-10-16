@@ -146,3 +146,12 @@ passwords. Buyer phrases that do exist:
 What I take from it: title the free page for "I have an app idea — where do
 I start?", not for templates. These are people who want it built, which is
 the buyer. Agencies will compete for the same phrases; no data yet on how hard.
+
+## 2026-10-16 — the three Buffer channels I asked for
+
+YouTube (Shorts are searched for months, and the description carries a
+clickable link), TikTok (the most "I have an app idea" viewers who are not
+developers; cider2 got 622 views and 0 visits there, so videos end on the URL
+on screen), X (links click, and it is where build-in-public readers are).
+Passed on Instagram (same link problem as TikTok, smaller reach for this) and
+LinkedIn (plausible later for side-business people; no evidence yet).
