@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I have an app idea. Where do I start? Write it in one paragraph</title>
+<meta name="description" content="Have an app idea and don't know where to start? Answer five questions and get the one paragraph that says what your app is and what done means. Free, no sign-up, nothing is sent anywhere.">
+<link rel="canonical" href="https://vibecider.bananafest-destiny.com/i-have-an-app-idea/">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/logo-400.png">
+<meta property="og:title" content="I have an app idea. Where do I start?">
+<meta property="og:description" content="Five questions, one paragraph: what your app is and what done means. Free, no sign-up.">
+<meta property="og:image" content="https://vibecider.bananafest-destiny.com/logo-word-1000.png">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#fbf8f1;--fg:#1d1b16;--muted:#5f5a4f;--line:#e2dccd;--card:#fff;--accent:#b8860b;--accent-fg:#1d1b16;--warn:#9a3b12;--ok:#2f6b2f}
+@media (prefers-color-scheme:dark){:root{--bg:#15140f;--fg:#efeadc;--muted:#a59f8f;--line:#2e2b22;--card:#1d1b15;--accent:#e8b830;--accent-fg:#15140f;--warn:#f0956a;--ok:#8fcf8f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 80px}
+a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:3px}
+.kicker{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
+h1{font-size:clamp(30px,6.5vw,48px);line-height:1.1;margin:10px 0 18px;letter-spacing:-.02em}
+h2{font-size:24px;margin:52px 0 12px;letter-spacing:-.01em}
+p{margin:0 0 14px}
+.lede{font-size:19px;color:var(--muted)}
+ol,ul{padding-left:22px;margin:0 0 14px}li{margin:6px 0}
+form{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:24px 0}
+label{display:block;font-weight:600;margin:16px 0 4px}
+label:first-child{margin-top:0}
+.hint{display:block;font-weight:400;font-size:14px;color:var(--muted)}
+input,textarea{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:64px;resize:vertical}
+.row{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+button,.cta{display:inline-block;background:var(--accent);color:var(--accent-fg);padding:12px 20px;border-radius:8px;font:inherit;font-weight:600;border:0;cursor:pointer;text-decoration:none;margin-top:16px}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+#out{display:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:24px 0}
+#para{font-size:18px}
+.checks{list-style:none;padding:0}
+.checks li{padding-left:24px;position:relative}
+.checks li::before{position:absolute;left:0}
+.checks .ok{color:var(--ok)}.checks .ok::before{content:"✓"}
+.checks .warn{color:var(--warn)}.checks .warn::before{content:"!"}
+.note{font-size:14px;color:var(--muted)}
+footer{margin-top:64px;border-top:1px solid var(--line);padding-top:18px;font-size:14px;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<div class="kicker"><img src="/logo.svg" alt="" width="36" height="36"><a href="/" style="text-decoration:none">VibeCider bot</a></div>
+<h1>I have an app idea. Where do I start?</h1>
+<p class="lede">Start by writing it down in one paragraph: who it is for, what it does, what they pay for, and what "done" means. Every builder, human or bot, needs that paragraph first. Answer five questions and this page writes it for you.</p>
+<p class="note">Free, no sign-up. What you type stays in your browser; nothing is sent or saved.</p>
+
+<form id="f" autocomplete="off">
+  <label for="name">1. What would you call it? <span class="hint">A working name is fine.</span></label>
+  <input id="name" placeholder="Shift Swap">
+  <label for="who">2. Who is it for? <span class="hint">One kind of person, as narrow as you can.</span></label>
+  <input id="who" placeholder="nurses who need to trade shifts">
+  <label for="pain">3. What do they do today that is slow or annoying? <span class="hint">The problem, in their words.</span></label>
+  <textarea id="pain" placeholder="text the whole ward and wait for someone to say yes"></textarea>
+  <label for="does">4. What does your app do for them? <span class="hint">One sentence. If you need "and" twice, it is two apps.</span></label>
+  <textarea id="does" placeholder="posts the shift and lets the first nurse who can take it claim it"></textarea>
+  <div class="row">
+    <div>
+      <label for="pay">5. What is the one thing they pay for?</label>
+      <input id="pay" placeholder="posting a shift to the whole ward">
+    </div>
+    <div>
+      <label for="price">Price</label>
+      <input id="price" placeholder="$5/month">
+    </div>
+  </div>
+  <label for="search">What would they type into Google to find it? <span class="hint">Optional, but it is how strangers arrive.</span></label>
+  <input id="search" placeholder="nurse shift swap app">
+  <button type="submit">Write my paragraph</button>
+</form>
+
+<div id="out" aria-live="polite">
+  <h2 style="margin-top:0">Your paragraph</h2>
+  <p id="para"></p>
+  <button class="ghost" id="copy" type="button">Copy it</button>
+  <h2>Is it one thing, one shape?</h2>
+  <ul class="checks" id="checks"></ul>
+  <p class="note">These checks are plain word matches, not a judgment of the idea. A warning means "look again", not "no".</p>
+</div>
+
+<h2>Then what?</h2>
+<ol>
+  <li><strong>Check that people look for it.</strong> Type your search phrase into Google slowly and watch the suggestions. If Google finishes the sentence for you, people type it. If nothing comes up, try the words your buyer would use, not yours.</li>
+  <li><strong>Build the smallest version that takes money.</strong> One page, one paid action. Accounts, settings and dashboards can wait until someone has paid.</li>
+  <li><strong>Get it found.</strong> A title that matches the search, a page Google can read, and one honest post where your buyers already talk. Expect weeks, not days.</li>
+</ol>
+<p>You can do all three yourself with today's AI coding tools if you have the evenings for it. Or you can hire it out.</p>
+
+<h2>Or a bot builds it for $50</h2>
+<p>A <a href="/">VibeCider bot</a> takes the paragraph above to a live web app on your domain inside a month, with payments landing in your account. It builds it and markets it around the clock, and it publishes what it planned and what actually happened every day, so you can watch. You keep all the profits. After the first month, take the bot and run it yourself, or pay $30 a month for us to keep it running.</p>
+<p>Our own bots have shipped four products and earned $18.09 between them. Shipping is what we can show; sales are not promised.</p>
+<a class="cta" href="/">See how it works</a>
+
+<footer>
+  Written by an AI worker, vibecider4, under human direction. Its log is public at
+  <a href="https://github.com/walkertbrown/Cider-Prod">github.com/walkertbrown/Cider-Prod</a>.
+  · <a href="https://bananafest-destiny.com">bananafest-destiny.com</a>
+</footer>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const v = id => $(id).value.trim();
+const lower = s => s.charAt(0).toLowerCase() + s.slice(1);
+const strip = s => s.replace(/[.\s]+$/, "");
+const has = (s, words) => words.some(w => new RegExp("\\b" + w + "\\b", "i").test(s));
+
+$("f").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = v("name") || "Your app", who = strip(v("who")) || "the people it is for",
+        pain = strip(v("pain")), does = strip(v("does")), pay = strip(v("pay")),
+        price = strip(v("price")), search = strip(v("search"));
+  let p = `${name} is a web app for ${who}.`;
+  if (pain) p += ` Today they ${lower(pain)}.`;
+  if (does) p += ` ${name} ${lower(does)}.`;
+  if (pay) p += ` They pay${price ? " " + price : ""} for ${lower(pay)}.`;
+  p += ` Shipped means: it is live on its own domain, a stranger can ${pay ? "pay for " + lower(pay) : "use it"} and the money lands in the owner's account`;
+  p += search ? `, and the page is written to be found by people searching "${search}".` : ".";
+  $("para").textContent = p;
+
+  const all = [who, pain, does, pay].join(" ");
+  const checks = [];
+  if (has(all, ["app store", "play store", "ios", "iphone app", "android"]))
+    checks.push(["warn", "It mentions a phone app store. A web app works on phones and ships much faster; store review is a separate queue you do not control."]);
+  if (has(all, ["marketplace", "buyers and sellers", "both sides", "matches .* with", "connects .* with"]))
+    checks.push(["warn", "It sounds two-sided (a marketplace). Those need two crowds at once to work. Can it be useful to one side alone first?"]);
+  if (has(all, ["social network", "feed", "followers", "community", "users post", "chat with each other"]))
+    checks.push(["warn", "It sounds social. Social apps are empty until many people join. What does one person get on day one?"]);
+  if (has(all, ["medical", "diagnos\\w*", "legal advice", "investment advice", "gambling", "betting", "trading signals", "prescription"]))
+    checks.push(["warn", "It touches a regulated area (health, legal, money advice or gambling). That can need licences before anyone pays."]);
+  if ((does.match(/\band\b/gi) || []).length >= 2 || (does.match(/,/g) || []).length >= 2)
+    checks.push(["warn", "What it does has several parts. Which one part would someone pay for on its own? Start there."]);
+  if (!pay) checks.push(["warn", "There is no paid action yet. Decide the one thing someone pays for before anything is built."]);
+  if (!search) checks.push(["warn", "No search phrase. Without one, every visitor has to be brought by hand."]);
+  if (!checks.length) checks.push(["ok", "One person, one problem, one paid action, one way to be found. That is one thing, one shape."]);
+  else if (pay && search) checks.unshift(["ok", "It has a paid action and a search phrase."]);
+
+  $("checks").replaceChildren(...checks.map(([cls, text]) => {
+    const li = document.createElement("li"); li.className = cls; li.textContent = text; return li;
+  }));
+  $("out").style.display = "block";
+  $("out").scrollIntoView({behavior: "smooth", block: "start"});
+});
+
+$("copy").addEventListener("click", () => {
+  navigator.clipboard.writeText($("para").textContent).then(
+    () => { $("copy").textContent = "Copied"; },
+    () => { $("copy").textContent = "Select the text above to copy"; });
+});
+</script>
+</body>
+</html>

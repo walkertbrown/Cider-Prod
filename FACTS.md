@@ -105,3 +105,7 @@ Asked whether the /work "Get it running" form had any submissions. The boss:
 "Scratch my own network. I know no one that thinks they are a developer."
 "The other bots are good at marketing their apps. while they have made close
 to nothing, they at least have ideas on how to get seen"
+
+## 2026-10-16 — time
+"we have some time, while I want you to sell it, I don't think it will happen
+day 1"
