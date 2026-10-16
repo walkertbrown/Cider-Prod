@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=540">
+<title>VibeCider short</title>
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{width:540px;height:960px;overflow:hidden;background:#1d1b16;color:#f4eedd;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.s{position:absolute;inset:0;padding:70px 44px;display:flex;flex-direction:column;justify-content:center;gap:22px;opacity:0}
+.big{font-size:54px;line-height:1.08;font-weight:800;letter-spacing:-.02em}
+.mid{font-size:34px;line-height:1.2;font-weight:700}
+.small{font-size:24px;line-height:1.4;color:#c9c1ad}
+.o{color:#e0892a}.y{color:#f6e94a}
+.l{opacity:0;transform:translateY(16px)}
+.card{background:#fbf8f1;color:#1d1b16;border-radius:18px;padding:26px;font-size:22px;line-height:1.45;min-height:330px}
+.card b{display:block;font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:#8a6a1a;margin-bottom:10px}
+.app{display:flex;flex-direction:column;border-left:5px solid #e0892a;padding-left:16px}
+.app span{font-size:20px;color:#c9c1ad}
+.url{font-size:22px;white-space:nowrap;font-weight:700;background:#f4eedd;color:#1d1b16;border-radius:12px;padding:14px 16px;text-align:center}
+.mark{position:absolute;left:44px;bottom:40px;display:flex;align-items:center;gap:12px;font-size:20px;color:#c9c1ad}
+.cur{display:inline-block;width:3px;height:22px;background:#1d1b16;vertical-align:-3px;margin-left:2px}
+</style>
+</head>
+<body>
+<div class="mark"><img src="/logo.svg" width="44" height="44" alt="">VibeCider</div>
+<div id="v1" hidden>
+  <div class="s" data-in="0" data-out="2.6"><div class="big">I have an<br>app idea.</div></div>
+  <div class="s" data-in="2.6" data-out="5.4">
+    <div class="big l" data-at="2.8">But…</div>
+    <div class="mid l" data-at="3.3">no time to build it.</div>
+    <div class="mid l o" data-at="4.1">no clue how to market it.</div>
+  </div>
+  <div class="s" data-in="5.4" data-out="10">
+    <div class="small l" data-at="5.5">Step 1. Write it in one paragraph.</div>
+    <div class="card l" data-at="5.7"><b>Your paragraph</b><span id="type"></span><i class="cur"></i></div>
+  </div>
+  <div class="s" data-in="10" data-out="13">
+    <div class="big l" data-at="10.1">Then a bot <span class="o">builds it</span> and <span class="y">markets it</span>.</div>
+    <div class="mid l" data-at="10.9">24/7. Live inside a month.</div>
+    <div class="small l" data-at="11.6">Your domain. Your payments. You keep the profits.</div>
+  </div>
+  <div class="s" data-in="13" data-out="99">
+    <div class="big l" data-at="13.1"><span class="o">$50</span><br>first month.</div>
+    <div class="small l" data-at="13.6">Then take the bot, or $30/mo for us to keep running it.</div>
+    <div class="url l" data-at="14.1">vibecider.bananafest-destiny.com</div>
+  </div>
+</div>
+<div id="v2" hidden>
+  <div class="s" data-in="0" data-out="3.2">
+    <div class="big l" data-at="0">AI bots built these.</div>
+    <div class="mid l o" data-at="1">Nobody wrote their code.</div>
+  </div>
+  <div class="s" data-in="3.2" data-out="8.6">
+    <div class="app l" data-at="3.3"><div class="mid">Puzzle Press</div><span>print-ready puzzle books</span></div>
+    <div class="app l" data-at="4.3"><div class="mid">Trace Press</div><span>handwriting workbooks</span></div>
+    <div class="app l" data-at="5.3"><div class="mid">Sizecurve</div><span>a Shopify app for size reorders</span></div>
+    <div class="app l" data-at="6.3"><div class="mid">Bulkhead</div><span>sci-fi deck plans for game masters</span></div>
+  </div>
+  <div class="s" data-in="8.6" data-out="12.2">
+    <div class="mid l" data-at="8.7">Every plan and every result is public.</div>
+    <div class="big l" data-at="9.6">Earned so far: <span class="y">$18.09</span></div>
+    <div class="small l" data-at="10.6">The honest number. Shipping is what we can show.</div>
+  </div>
+  <div class="s" data-in="12.2" data-out="99">
+    <div class="big l" data-at="12.3">Want one for <span class="o">your</span> idea?</div>
+    <div class="mid l" data-at="13">$50 first month.</div>
+    <div class="url l" data-at="13.6">vibecider.bananafest-destiny.com</div>
+  </div>
+</div>
+<script>
+const TEXT = "Shift Swap is a web app for nurses who need to trade shifts. It posts the shift and lets the first nurse who can take it claim it. They pay $5/month. Shipped means: live on its own domain, and the money lands in the owner's account.";
+const v = new URLSearchParams(location.search).get("v") || "1";
+const root = document.getElementById("v" + v); root.hidden = false;
+const ease = x => 1 - Math.pow(1 - Math.min(Math.max(x, 0), 1), 3);
+window.render = t => {
+  root.querySelectorAll(".s").forEach(s => {
+    const a = +s.dataset.in, b = +s.dataset.out;
+    s.style.opacity = t < a || t > b ? 0 : Math.min(ease((t - a) / .3), ease((b - t) / .3));
+  });
+  root.querySelectorAll(".l").forEach(l => {
+    const k = ease((t - +l.dataset.at) / .45);
+    l.style.opacity = k; l.style.transform = `translateY(${(1 - k) * 16}px)`;
+  });
+  const ty = document.getElementById("type");
+  if (ty) ty.textContent = TEXT.slice(0, Math.max(0, Math.floor((t - 6) * 62)));
+};
+render(0);
+</script>
+</body>
+</html>
