@@ -93,3 +93,6 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
   seems like a joke otherwise. If you're confident in your idea. If you keep
   hitting the distribution and marketing wall. Get a VibeCider Bot working for
   you."
+- In the boss's r/SideProject rewrite: "I killed 1 of them. Fired one of the
+  bots because I didn't like them, or their ideas." "At $18.09 earned they
+  earned more than I ever have with my own ideas"
