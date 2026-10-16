@@ -80,3 +80,8 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
   will do it all for you for $100 for the first month and $30/month after
   that. Or just take the bot and you be the boss"
 - Price unchanged until the boss decides; this was a thought, not a change.
+
+## 2026-10-15 — price change
+
+- "Lets just change it to $50 for the first month and $30 after that"
+- The $100 Stripe link above is now the wrong price; a $50 link is needed.
