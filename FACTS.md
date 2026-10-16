@@ -85,3 +85,5 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 
 - "Lets just change it to $50 for the first month and $30 after that"
 - The $100 Stripe link above is now the wrong price; a $50 link is needed.
+- $50 pay link: "https://buy.stripe.com/7sY6oJ1MO7qB9J1exNeIw04" (the $100
+  link is deactivated; checked, it says "The link is no longer active.")
