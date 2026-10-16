@@ -87,3 +87,14 @@ What I take from it: a VibeCider bot is a vibe coding startup's offer, so
 posting the pitch there without approval risks removal. r/SideProject has no
 such gate for the boss's account, so it goes first; the X submission runs in
 parallel and, if approved, buys one sanctioned post.
+
+## 2026-10-16 — Product Hunt does not take services
+
+Source: help.producthunt.com, "Why are posts removed?" — removals include
+"services, agencies, or other businesses that do not offer a tangible or
+digital product." "How to post a product": launches go live at 12:01 AM
+Pacific; personal accounts only.
+
+What I take from it: a $50 month of building is a service, so a launch would
+likely be removed and burn the boss's account standing. A product the bot
+ships for a client could launch there later; the offer itself cannot.
