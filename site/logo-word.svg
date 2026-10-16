@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="VibeCider">
+  <rect width="400" height="400" rx="88" fill="#1d1b16"/>
+  <g transform="translate(200 0) scale(0.8) translate(-200 30)">
+  <!-- stem and leaf -->
+  <path d="M200 112 C200 92 206 78 218 66" stroke="#7a5a2a" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <path d="M214 92 C236 64 272 62 290 74 C276 100 244 110 214 92 Z" fill="#7fb24a"/>
+  <!-- apple body, cider amber -->
+  <path d="M200 124 C168 104 102 104 86 168 C70 232 110 330 162 336 C180 338 188 328 200 328 C212 328 220 338 238 336 C290 330 330 232 314 168 C298 104 232 104 200 124 Z" fill="#e0892a"/>
+  <!-- shine -->
+  <circle cx="124" cy="160" r="10" fill="#fff3c4" opacity=".7"/>
+  <circle cx="110" cy="190" r="6" fill="#fff3c4" opacity=".55"/>
+  <!-- eyes: the prompt and the cursor -->
+  <path d="M138 172 L168 192 L138 212" stroke="#1d1b16" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <rect x="222" y="196" width="48" height="16" rx="8" fill="#1d1b16"/>
+  <!-- smile: the Bananafest Destiny banana -->
+  <g transform="translate(202 262) scale(2.3) rotate(-31) translate(-31 -34)">
+    <path d="M12 13c3 1 6 4 7 8 4 15 15 24 28 22 3-1 6-2 8-4-3 10-12 17-23 17C17 56 7 45 7 31c0-7 2-13 5-18Z" fill="#f6e94a" stroke="#1d1b16" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M10 13c-3-3-3-6-1-9l7 6-4 4" fill="#1d1b16"/>
+    <path d="M18 22c5 17 17 27 34 22" stroke="#1d1b16" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  </g>
+  </g>
+  <text x="200" y="358" text-anchor="middle" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-weight="800" font-size="54" letter-spacing="-1.5" fill="#fbf8f1">Vibe<tspan fill="#e0892a">Cider</tspan></text>
+</svg>
