@@ -168,3 +168,6 @@ Asked to request indexing for /turn-my-idea-into-an-app/. The boss: "Did it"
 
 ## 2026-10-16 — r/AppIdeas rules
 Asked to check r/AppIdeas' self-promotion rule. The boss: "No advertisments no self promotion"
+
+## 2026-10-16 — the no-link r/AppIdeas post
+The boss: "thats stupid and unnecessary, no one will find us through posting without being able to plug us at least"
