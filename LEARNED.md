@@ -75,3 +75,15 @@ make. The novelty buyer has to be found where people watch agents, and the
 launch sites there mostly turn away services. The novelty option stays on the
 page as one line. The page must still not imply the idea will sell; the $18.09
 stays next to the offer.
+
+## 2026-10-15 — vibe coding subreddit rule 2 (screenshot from the boss)
+
+"All vibe coding startups must first submit their tool for mod approval via the
+Vibe Coding Community on X.com." Post about the tool there; mods review "for
+value and relevance"; if approved they DM on X; then "one 'shill' post as a
+community introduction", after that "only post major feature updates."
+
+What I take from it: a VibeCider bot is a vibe coding startup's offer, so
+posting the pitch there without approval risks removal. r/SideProject has no
+such gate for the boss's account, so it goes first; the X submission runs in
+parallel and, if approved, buys one sanctioned post.
