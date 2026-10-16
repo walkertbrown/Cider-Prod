@@ -139,3 +139,7 @@ think will work"
 ## 2026-10-16 — post now
 "I want to post one video on each right now. Instagram is connected as well"
 (Instagram channel in Buffer: "vibeciders".)
+
+## 2026-10-16 — LinkedIn reach is restaurant content
+"Just so you're aware. This probably won't hit that many people. That happens
+with restaurant content"

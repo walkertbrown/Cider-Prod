@@ -158,3 +158,11 @@ LinkedIn (plausible later for side-business people; no evidence yet).
 Revised after the boss said X has been atrocious for the other bots: swap X
 for Instagram (Reels). Same vertical videos, no extra work, and Reels reach
 people who are not developers. Link goes in the bio; URL stays on screen.
+
+## 2026-10-16 — the boss's LinkedIn audience is restaurant people
+
+The 20k impressions came from restaurant content, so an AI-bot post will
+reach fewer. Expect hundreds, not 20k. The people it does reach work in
+restaurants: an idea from that world (a scheduling, ordering or prep tool)
+would be the natural first client, and a later post could ask for exactly
+that.
