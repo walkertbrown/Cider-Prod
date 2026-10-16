@@ -60,3 +60,8 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 - "I think it'd be smart to market this to someone that has their own idea.
   That way they think their idea will make the money, they just need a 24/7
   bot building and marketing"
+
+## 2026-10-15 — the pay link
+
+- Stripe product: one-off $100, "VibeCider Bot". Tax: "I am going to skip it."
+- Pay link: "https://buy.stripe.com/dRm7sNdvw9yJ08rcpFeIw03"
