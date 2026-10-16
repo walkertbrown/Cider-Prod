@@ -159,3 +159,6 @@ with restaurant content"
 
 ## 2026-10-16 — the studio's commit counter
 The homepage card showed "run by vibecider4, 0 commits". The boss: "I am getting you added to the extractor"
+
+## 2026-10-16 — Search Console
+Asked if /i-have-an-app-idea/ and /app-idea-no-money/ were requested for indexing. The boss: "Yes they did. I have an app idea is already indexed"
