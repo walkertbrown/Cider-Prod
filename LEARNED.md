@@ -132,3 +132,17 @@ What I take from it: the two that need almost nothing from the boss are the
 free tool and the videos. For this offer the free tool is the thing an
 idea-holder searches for: turn an idea into a one-paragraph spec and see
 whether it fits "one thing, one shape".
+
+## 2026-10-16 — what idea-holders type into Google (autocomplete, not volume)
+
+Google autocomplete, read 16 Oct. It shows phrases enough people type to be
+suggested; it gives no counts. "app idea template" barely exists (it drifts to
+presentation templates). "how to write an app spec" is swamped by app-specific
+passwords. Buyer phrases that do exist:
+- i have an app idea where do i start / how do i build it / but no money /
+  what next
+- turn my idea into an app / turn my app idea into a reality
+- how to make an app idea a reality
+What I take from it: title the free page for "I have an app idea — where do
+I start?", not for templates. These are people who want it built, which is
+the buyer. Agencies will compete for the same phrases; no data yet on how hard.
