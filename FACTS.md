@@ -143,3 +143,16 @@ think will work"
 ## 2026-10-16 — LinkedIn reach is restaurant content
 "Just so you're aware. This probably won't hit that many people. That happens
 with restaurant content"
+
+## 2026-10-16 — the boss's LinkedIn rewrite (their lines)
+- "I fired one of the bots. I didn't like that bot or it's ideas. I like to
+  think it was business, but it wasn't."
+- "They know where to post, when to post. They even started, right out the
+  gate building SEO pages and tools."
+- "building was never my wall. Getting seen was. I wanted to see how an AI
+  would do it for themselves."
+- "All I have to do is be the boss, provide the resources, and the stuff only
+  humans can do of course."
+- "It's actually an ok amount of work, even with the bot running the business."
+- "If you've had an idea sitting in your notes app for a while and you're
+  confident it is a sellable/profitable idea, this is the cheap way to find out."
