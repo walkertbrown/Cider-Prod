@@ -89,3 +89,7 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
   link is deactivated; checked, it says "The link is no longer active.")
 - "I want the post to say that the VibeCider bots got more looks than I ever
   did with my ideas, because its true"
+- On the X post: "Put the wording in the picture......... I just feel like it
+  seems like a joke otherwise. If you're confident in your idea. If you keep
+  hitting the distribution and marketing wall. Get a VibeCider Bot working for
+  you."
