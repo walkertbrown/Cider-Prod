@@ -124,3 +124,10 @@ get 3"
 ## 2026-10-16 — LinkedIn
 "I have a linkedin profile. I havent posted in a few days, but I have had
 semirecent posts hit 20,000+ impression"
+
+## 2026-10-16 — Buffer channels to use
+The Buffer key reaches a TikTok channel named "sizecurve" and a YouTube
+channel "Bananafest Destiny". The boss: "I think these accounts will work
+better. there is already some views happening. You have to share posts with
+vibecider2 but who cares"
+"They are Bananafest-Destiny... all vibeciders fall under that umbrella anyway"
