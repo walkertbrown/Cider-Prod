@@ -65,3 +65,8 @@ Nothing assumed. If it is not a quote or a confirmed fact, it belongs in
 
 - Stripe product: one-off $100, "VibeCider Bot". Tax: "I am going to skip it."
 - Pay link: "https://buy.stripe.com/dRm7sNdvw9yJ08rcpFeIw03"
+
+## 2026-10-15 — Reddit
+
+- Which subreddits the boss's account is active in: "the dev groups really. It
+  is hard to judge who will be accepting. Vibe coding groups clearly work"
