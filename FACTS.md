@@ -213,3 +213,6 @@ Recommended making VibeCider itself prove out (first paying client) and building
 
 ## 2026-10-17 — AI comic cover payments
 Asked whether AI cover sales go to the same Stripe account as the $50 VibeCider link or a different one. The boss: "same"
+
+## 2026-10-17 — AI comic cover price
+Recommended $9 per cover, buying 3 AI drawings to choose from, with no free AI preview. The boss: "yes that is fine."
