@@ -19,3 +19,4 @@ app/release/stage/
 # real people — drafts for the boss, never pushed
 outbox/*
 !outbox/.gitkeep
+demo/comiccover/wrangler.local.jsonc

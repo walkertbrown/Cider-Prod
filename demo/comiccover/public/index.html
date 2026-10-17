@@ -44,6 +44,18 @@ button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)
 .note{font-size:14px;color:var(--muted)}
 .demo{border-left:4px solid var(--accent);padding:10px 14px;background:var(--hi);border-radius:0 8px 8px 0;font-size:15px}
 ul{padding-left:20px}li{margin:6px 0}
+.buy{display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px;align-items:start;margin-top:36px}
+.buy img{width:100%;height:auto;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+@media (max-width:560px){.buy{grid-template-columns:1fr}.buy img{max-width:260px}}
+.buy h2{margin-top:0}
+#paid{display:none;margin-top:20px;border:2px solid var(--accent)}
+#paid h2{margin-top:0}
+.gal{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.gal button{padding:0;background:none;border:3px solid transparent;border-radius:8px;margin:0;width:110px}
+.gal button.on{border-color:var(--accent)}
+.gal img{width:100%;display:block;border-radius:5px}
+#status{font-weight:600;min-height:1.5em;margin-top:10px}
+button:disabled{opacity:.55;cursor:wait}
 footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-size:14px;color:var(--muted)}
 @media print{body{background:#fff}main>*:not(.grid),.grid>.panel,.grid .acts,footer{display:none!important}.grid{display:block;margin:0}#cv{box-shadow:none;border-radius:0;width:6.625in;height:10.25in}main{padding:0}}
 </style>
@@ -51,7 +63,21 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-si
 <body>
 <main>
 <h1>Custom comic book cover maker</h1>
-<p class="lede">Put anyone on the cover of their own comic. Add a photo, name the series, write the big line, and download a print-size cover. Free, no sign-up, and the photo never leaves your device.</p>
+<p class="lede">Put anyone on the cover of their own comic. Add a photo, name the series, write the big line, and download a print-size cover. Free, no sign-up, and the photo never leaves your device. <a href="#buy">Or have it drawn by an AI artist for $9.</a></p>
+
+<section class="panel" id="paid" aria-live="polite">
+  <h2>Your AI drawings</h2>
+  <p id="pmsg">Checking your order…</p>
+  <div id="pform" hidden>
+    <p>1. Add the photo in the form below (one person, a couple, or a pet; face clear and well lit). 2. Pick the costume colour. 3. Press Draw. Each drawing takes 10 to 60 seconds and drops into your cover; tap one to use it.</p>
+    <label for="power">Their power or story <span class="hint">Optional. "Fixes the Wi-Fi with one look", "flies over the beach".</span></label>
+    <input id="power" type="text" maxlength="100">
+    <button type="button" id="go">Draw my hero</button>
+    <div id="status"></div>
+  </div>
+  <div class="gal" id="gal"></div>
+  <p class="note">Bookmark this page: your drawings stay here for 30 days. The photo is sent to Google's Gemini (or OpenAI's, if Gemini fails) to be drawn, and we do not save it. Use a photo you have the right to use. A problem with your order? Tell us on <a href="https://bananafest-destiny.com/work#start">the studio's form</a> and say the day you paid.</p>
+</section>
 
 <div class="grid">
 <form class="panel" id="f" autocomplete="off">
@@ -93,6 +119,17 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-si
 </div>
 </div>
 
+<section class="buy" id="buy">
+  <img src="/examples/captain-biscuit.jpg" width="640" height="990" alt="Example: a golden retriever drawn by the AI as a superhero on a comic cover titled Captain Biscuit" loading="lazy">
+  <div>
+    <h2>Have it drawn for real: $9</h2>
+    <p>The free version puts a filter on your photo. This one has an AI artist redraw it as a comic book hero: costume, cape, heroic pose, a city behind them, inked and coloured like a real 1960s cover, and still looking like them.</p>
+    <p><b>$9 buys 3 drawings</b> of your photo to choose from. Each one drops into the cover you design here, ready to download and print.</p>
+    <a class="btn" href="https://buy.stripe.com/bJe6oJ0IKfX76wPblBeIw05">Get 3 AI drawings for $9</a>
+    <p class="note">Secure checkout by Stripe. After paying you come straight back here to add the photo. It is sent to an AI image service (Google Gemini, or OpenAI as a backup) to be drawn and is not saved by us; the drawings are kept for 30 days. Example drawn from a public-domain photo of a golden retriever.</p>
+  </div>
+</section>
+
 <h2>Gift ideas that work</h2>
 <ul>
   <li><b>Dad or grandpa:</b> "The Amazing Super Dad", with the thing he always fixes as the big line.</li>
@@ -102,7 +139,7 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-si
 </ul>
 <p>The heroes are yours. Use original names; Marvel and DC logos and characters belong to them.</p>
 
-<p class="demo">This app was built by an AI bot as a demo of what a <a href="https://vibecider.bananafest-destiny.com/">VibeCider bot</a> makes: one small web app, one job, live on its own domain. A paid version (an AI-drawn cover in real comic art style) is not built. Have an idea of your own? A bot builds it and markets it for $50 the first month.</p>
+<p class="demo">This app was built by an AI bot as a demo of what a <a href="https://vibecider.bananafest-destiny.com/">VibeCider bot</a> makes: one small web app, one job, live on its own domain. The bot built the paid version too: payment check, three tries per order, a backup artist if the first fails. Have an idea of your own? A bot builds it and markets it for $50 the first month.</p>
 
 <footer>
   Built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>. Its log is public at
@@ -257,9 +294,10 @@ function draw() {
   ctx.fillText("comiccover.bananafest-destiny.com", 205, H - 60);
 }
 
+let photo = null;
 $("photo").addEventListener("change", e => {
   const file = e.target.files[0]; if (!file) return;
-  const im = new Image(); im.onload = () => { img = im; art = null; draw(); }; im.src = URL.createObjectURL(file);
+  const im = new Image(); im.onload = () => { img = photo = im; art = null; setOn(0); draw(); }; im.src = URL.createObjectURL(file);
 });
 $("f").addEventListener("input", draw);
 $("f").addEventListener("submit", e => e.preventDefault());
@@ -270,6 +308,60 @@ $("dl").addEventListener("click", () => {
     document.body.appendChild(a); a.click(); a.remove();
   }, "image/png");
 });
+// Paid mode: /paid?session_id=… (Stripe sends buyers back here).
+const sid = new URLSearchParams(location.search).get("session_id");
+const drawings = {};
+function setOn(n) { for (const b of $("gal").children) b.classList.toggle("on", +b.dataset.n === n); }
+function useDrawing(n) {
+  const im = drawings[n]; if (!im) return;
+  img = im; art = null; document.querySelector('input[name=fx][value="0"]').checked = true; setOn(n); draw();
+  if (innerWidth <= 720) cv.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+async function addDrawing(n) {
+  if (drawings[n]) return;
+  const r = await fetch(`/api/img/${sid}/${n}`); if (!r.ok) return;
+  const src = `data:${r.headers.get("x-mime") || "image/png"};base64,` + await r.text();
+  const im = new Image(); await new Promise(ok => { im.onload = ok; im.src = src; });
+  drawings[n] = im;
+  const b = document.createElement("button"); b.type = "button"; b.dataset.n = n; b.title = `Drawing ${n}: use it on the cover`;
+  b.append(Object.assign(document.createElement("img"), { src, alt: `AI drawing ${n}` }));
+  b.onclick = () => useDrawing(n);
+  $("gal").append(b);
+}
+function showLeft(left) {
+  $("pmsg").textContent = left > 0 ? `Paid. Thank you! ${left} of 3 drawings left.` : "All 3 drawings are done. Tap one to put it on the cover, then download.";
+  $("pform").hidden = left <= 0;
+  $("go").textContent = `Draw my hero (${left} left)`;
+}
+function shrink(im) {
+  const s = Math.min(1, 1024 / Math.max(im.width, im.height)), c = document.createElement("canvas");
+  c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+  c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", .9).split(",")[1];
+}
+if (sid) {
+  $("paid").style.display = "block"; $("buy").style.display = "none";
+  document.querySelector("label[for=photo] .hint").textContent = "A face or a whole person, well lit. Sent to the AI artist when you press Draw.";
+  fetch(`/api/order?session_id=${encodeURIComponent(sid)}`).then(r => r.json()).then(async o => {
+    if (o.error) { $("pmsg").textContent = o.error; return; }
+    showLeft(o.left);
+    for (const d of o.drawings.sort((a, b) => a.n - b.n)) await addDrawing(d.n);
+  }, () => { $("pmsg").textContent = "Could not load your order. Reload the page to try again."; });
+  $("go").addEventListener("click", async () => {
+    if (!photo) { $("status").textContent = "Add a photo in the form below first."; $("photo").focus(); return; }
+    $("go").disabled = true; $("status").textContent = "Drawing… this takes 10 to 60 seconds. Keep this page open.";
+    try {
+      const r = await fetch("/api/draw", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ session_id: sid, photo: shrink(photo), color: pick("c"), power: val("power") }) });
+      const o = await r.json();
+      if (o.left !== undefined) showLeft(o.left);
+      if (o.error) { $("status").textContent = o.error; return; }
+      await addDrawing(o.n); useDrawing(o.n);
+      $("status").textContent = `Drawing ${o.n} is on your cover. Download it below, or draw another.`;
+    } catch { $("status").textContent = "The connection dropped. Reload the page: if the drawing finished, it will be there."; }
+    finally { $("go").disabled = false; }
+  });
+}
 document.fonts.load(`80px ${FONT}`).then(draw, draw);
 draw();
 </script>
