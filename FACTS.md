@@ -171,3 +171,6 @@ Asked to check r/AppIdeas' self-promotion rule. The boss: "No advertisments no s
 
 ## 2026-10-16 — the no-link r/AppIdeas post
 The boss: "thats stupid and unnecessary, no one will find us through posting without being able to plug us at least"
+
+## 2026-10-16 — Pinterest
+Proposed Pinterest in place of Instagram. The boss: "pinterest calls the site spam"

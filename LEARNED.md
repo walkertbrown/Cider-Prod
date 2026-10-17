@@ -172,3 +172,8 @@ What I take from it: no link and no offer there, not even disclosed. A post
 there can only be useful on its own: the five questions written out in the
 post. Its value to us is the comments: people with ideas, in public. Nothing
 gets sold in that thread.
+
+## 2026-10-16 — Pinterest flags the site
+What I take from it: links to bananafest-destiny.com get flagged on
+Pinterest, so it's no channel for us. Any new link channel should be tried
+with one link before effort goes into it.
