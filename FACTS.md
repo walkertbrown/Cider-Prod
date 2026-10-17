@@ -177,3 +177,6 @@ Proposed Pinterest in place of Instagram. The boss: "pinterest calls the site sp
 
 ## 2026-10-16 — claiming an idea
 Asked: can each idea on the app-ideas list be claimed, the first person to pay $50 gets it built for them and it comes off the list? The boss: "Yeah that would be fine"
+
+## 2026-10-16 — tip pool calculator
+Proposed a tip pool calculator for restaurants as app idea #1. The boss: "That idea is an idea I have shot down multiple times." ... "I mean tip pool calculator"
