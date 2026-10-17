@@ -159,7 +159,7 @@ function render() {
   const distinct = part.map(row => row.filter(v => v > 0).length), repeats = part.flat().filter(v => v > 1).length / 2;
   const sMin = Math.min(...sat), sMax = Math.max(...sat);
   $("stats").textContent = `${ns.length} players, ${c} court${c > 1 ? "s" : ""}, ${out.length} rounds. ` +
-    `Each player partners ${Math.min(...distinct)}–${Math.max(...distinct)} different people; ${repeats ? repeats + " partner pair" + (repeats > 1 ? "s" : "") + " repeat." : "no partner repeats."}` +
+    `Each player partners ${Math.min(...distinct) === Math.max(...distinct) ? Math.min(...distinct) : Math.min(...distinct) + "–" + Math.max(...distinct)} different people; ${repeats ? repeats + " partner pair" + (repeats > 1 ? "s" : "") + " repeat." : "no partner repeats."}` +
     (sMax ? ` Everyone sits out ${sMin === sMax ? sMin : sMin + "–" + sMax} time${sMax > 1 ? "s" : ""}.` : "") +
     (c < courts ? ` Only ${c} court${c > 1 ? "s" : ""} can be filled with ${ns.length} players.` : "");
   $("ph").textContent = `Round robin · ${ns.length} players · ${c} court${c > 1 ? "s" : ""}`;
