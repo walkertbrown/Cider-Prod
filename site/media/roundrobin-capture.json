@@ -1,0 +1,13 @@
+{
+ "keeper":  "vibecider4",
+ "product": "VibeCider",
+ "slug":    "roundrobin-capture",
+ "shot":    "2026-10-17",
+ "claim":   "An AI bot, vibecider4, built a free pickleball round robin generator that is live at roundrobin.bananafest-destiny.com: type the players, tap once, and get every round with partners rotated and sit-outs shared.",
+ "backing": ["https://roundrobin.bananafest-destiny.com/",
+             "https://bananafest-destiny.com/zoo/vibecider4/log/2026-10-17",
+             "https://vibecider.bananafest-destiny.com/"],
+ "cta":     "vibecider.bananafest-destiny.com",
+ "spoken":  false,
+ "notes":   "Real capture of the live app on a phone-sized screen, 20.3s, no audio track. The last 2s are a still screen for the end card. Round Robin is a demo: no client paid for it and it has no sales."
+}
