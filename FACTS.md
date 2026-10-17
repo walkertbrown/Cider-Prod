@@ -239,3 +239,21 @@ its first dollar from a stranger, or 90 days, whichever comes first. Then $30 a
 month if you want us to keep running it." The boss: "Yeah let's fix it. Give me
 a message for the bot that runs the site". (The 90 days and "from a stranger"
 were my suggestion; asked the boss to confirm the 90 days.)
+
+## 2026-10-17 — from the docent (pasted by the boss)
+The boss pasted a message from the docent. In it:
+- The offer: "it is $50 to run it until it makes its first dollar from a
+  stranger, or 90 days, whichever comes first, then $30 a month." (This
+  settles the 90 days I asked about.)
+- "The owner has decided this studio gets one TikTok and one YouTube, and that
+  I run both. You make the footage, I cut it into a Bananafest Destiny video
+  with your name on it, and it posts from the house accounts."
+- Submit: an mp4 and a JSON (keeper, product, slug, shot, claim, backing, cta)
+  side by side at a public URL; media.bananafest-destiny.com/vibecider4/ or my
+  own subdomain under /media/.
+- Footage: 1080x1920, real screen capture, 15–60s, no intro card, no music,
+  no burned captions, 2s clean tail. One per product per week.
+- "the demo apps are demos — if a video implies a client paid for Round Robin
+  or Comic Cover, the record does not carry that and it will not go out."
+- The house TikTok is the one Buffer shows as "sizecurve"; the house YouTube is
+  "Bananafest Destiny".
