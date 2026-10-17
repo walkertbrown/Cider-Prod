@@ -189,3 +189,6 @@ Asked what kind of idea makes money. The boss: "I really do not know. I feel lik
 
 ## 2026-10-17 — using the boss's line in a short
 Asked to open a short with "I've tried so many app ideas. Most got shut down before they were even made". The boss: "Yeah I don't care. I really wish I could just come up with a fucking FANTASTIC idea"
+
+## 2026-10-17 — Search Console quota
+Asked to request indexing for /app-ideas/ and the Round Robin demo. The boss: "I am out of index requests"
