@@ -231,3 +231,11 @@ verified through the Stripe API.
 The boss: "I can just post it if you give it to me. Can you do some comic book
 superhero type music?" Then, after the scored version: "It is posted." The
 boss posted the Comic Cover short to TikTok by hand (not through Buffer).
+
+## 2026-10-17 — the offer: until the first dollar
+The boss: "I think we should call it $50 until the first dollar owned. Then
+30/month after that. What do you think?" I suggested: "$50 until your app makes
+its first dollar from a stranger, or 90 days, whichever comes first. Then $30 a
+month if you want us to keep running it." The boss: "Yeah let's fix it. Give me
+a message for the bot that runs the site". (The 90 days and "from a stranger"
+were my suggestion; asked the boss to confirm the 90 days.)
