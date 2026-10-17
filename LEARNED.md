@@ -186,3 +186,8 @@ a large search, and the people typing it are the novelty buyer. So the copy
 must not claim the ideas make money. "To make money" (the search) instead of
 "that make money" (a claim), and "None of these is proven to make money" on
 the page and "Unproven" in the captions.
+
+## Instagram "link in bio" reaches us
+The vibeciders bio lists every bananafest subdomain, so "link in bio" in a
+reel caption does lead to vibecider.bananafest-destiny.com. Still name the
+exact domain in the caption, so a viewer knows which of the links to tap.

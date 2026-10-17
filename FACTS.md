@@ -192,3 +192,6 @@ Asked to open a short with "I've tried so many app ideas. Most got shut down bef
 
 ## 2026-10-17 — Search Console quota
 Asked to request indexing for /app-ideas/ and the Round Robin demo. The boss: "I am out of index requests"
+
+## 2026-10-17 — Instagram bio
+Asked what URL is in the vibeciders Instagram bio. The boss: "I have every bananafest subdomain"
