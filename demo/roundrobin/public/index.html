@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pickleball round robin generator with names, printable | Round Robin</title>
+<meta name="description" content="Free pickleball round robin generator. Type the names and number of courts, get a fair doubles schedule where everyone rotates partners and opponents, with sit-outs shared evenly. Print it or share the link. No sign-up.">
+<link rel="canonical" href="https://roundrobin.bananafest-destiny.com/">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<meta property="og:title" content="Pickleball round robin generator with names">
+<meta property="og:description" content="Names and courts in, a fair printable schedule out. Free, no sign-up.">
+<style>
+:root{--bg:#f6f8f3;--fg:#17201a;--muted:#56625a;--line:#d9e0d6;--card:#fff;--accent:#2f7d4f;--accent-fg:#fff;--hi:#eef6e8}
+@media (prefers-color-scheme:dark){:root{--bg:#111613;--fg:#e6ede7;--muted:#9aa89e;--line:#27302a;--card:#18201b;--accent:#5fc287;--accent-fg:#0d130f;--hi:#1d2a21}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 72px}
+a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:3px}
+h1{font-size:clamp(28px,6vw,42px);line-height:1.12;margin:0 0 12px;letter-spacing:-.02em}
+h2{font-size:22px;margin:40px 0 10px}
+p{margin:0 0 12px}
+.lede{color:var(--muted);font-size:18px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin:20px 0}
+label{display:block;font-weight:600;margin:0 0 4px}
+.hint{font-weight:400;font-size:14px;color:var(--muted)}
+textarea,input{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:200px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+button{background:var(--accent);color:var(--accent-fg);border:0;border-radius:8px;padding:12px 18px;font:inherit;font-weight:600;cursor:pointer;margin:14px 8px 0 0}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+#out{display:none}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{border:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+th{background:var(--hi);font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+td .v{display:block;color:var(--muted);font-size:12px;margin:2px 0}
+.wrap{overflow-x:auto}
+.stats{font-size:15px;color:var(--muted)}
+.err{color:#b3261e;font-weight:600}
+.demo{border-left:4px solid var(--accent);padding:10px 14px;background:var(--hi);border-radius:0 8px 8px 0;font-size:15px}
+footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-size:14px;color:var(--muted)}
+.printhead{display:none}
+@media print{
+  body{background:#fff;color:#000;font-size:12px}
+  .noprint,footer{display:none!important}
+  main{padding:0;max-width:none}
+  #out{display:block!important}
+  .panel{border:0;padding:0;margin:0}
+  th{background:#eee}
+  th,td{border:1px solid #999;padding:5px}
+  .printhead{display:block;font-size:16px;font-weight:700;margin-bottom:8px}
+}
+</style>
+</head>
+<body>
+<main>
+<div class="noprint">
+<h1>Pickleball round robin generator, with names</h1>
+<p class="lede">Type the players and the number of courts. Get a doubles schedule where everyone rotates partners and opponents, and sit-outs are shared evenly. Print it for the fence or send the link. Free, no sign-up.</p>
+
+<form class="panel" id="f">
+  <label for="names">Players <span class="hint">One name per line. 4 to 48 players.</span></label>
+  <textarea id="names" placeholder="Ana&#10;Ben&#10;Carla&#10;Dev&#10;Eli&#10;Fay&#10;Gus&#10;Hana&#10;Ivy"></textarea>
+  <div class="row">
+    <div><label for="courts">Courts</label><input id="courts" type="number" min="1" max="12" value="2"></div>
+    <div><label for="rounds">Rounds</label><input id="rounds" type="number" min="1" max="30" value="7"></div>
+  </div>
+  <button type="submit">Make the schedule</button>
+  <p id="err" class="err" role="alert"></p>
+</form>
+</div>
+
+<section id="out" class="panel" aria-live="polite">
+  <div class="printhead" id="ph"></div>
+  <div class="noprint">
+    <h2 style="margin-top:0">Your schedule</h2>
+    <p class="stats" id="stats"></p>
+    <button type="button" onclick="window.print()">Print</button>
+    <button type="button" class="ghost" id="share">Copy link</button>
+    <button type="button" class="ghost" id="again">Shuffle again</button>
+  </div>
+  <div class="wrap" style="margin-top:14px"><table id="tbl"></table></div>
+</section>
+
+<div class="noprint">
+<h2>How it's fair</h2>
+<p>Each round, the players who have sat out least sit out next, so nobody sits twice before everyone has sat once. Then it tries thousands of ways to split the players into pairs and courts and keeps the one that repeats the fewest partners and opponents so far. With 8 players and 7 rounds, everyone partners every other player exactly once when it can find it.</p>
+<p>The link holds the names, courts and shuffle, so anyone who opens it sees the same schedule. Nothing is stored on a server.</p>
+
+<p class="demo">This app was built by an AI bot as a demo of what a <a href="https://vibecider.bananafest-destiny.com/">VibeCider bot</a> makes: one small web app, one job, live on its own domain. The paid version in <a href="https://vibecider.bananafest-destiny.com/app-ideas/">the idea</a> (a $4 printable night, $6/month leagues with standings) is not wired up here. Have an idea of your own? A bot builds it and markets it for $50 the first month.</p>
+</div>
+
+<footer>
+  Built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>. Its log is public at
+  <a href="https://github.com/walkertbrown/Cider-Prod">github.com/walkertbrown/Cider-Prod</a>.
+</footer>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let seed = 1;
+
+function rng(s) { // mulberry32
+  return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function shuffle(a, r) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function schedule(n, courts, rounds, s) {
+  const r = rng(s);
+  const playing = Math.min(courts, Math.floor(n / 4)) * 4;
+  const sat = Array(n).fill(0), last = Array(n).fill(-1);
+  const part = [...Array(n)].map(() => Array(n).fill(0)), opp = [...Array(n)].map(() => Array(n).fill(0));
+  const out = [];
+  for (let k = 0; k < rounds; k++) {
+    // sit out the players who have sat least; break ties by who sat longest ago, then at random
+    const order = shuffle([...Array(n).keys()], r).sort((a, b) => sat[a] - sat[b] || last[a] - last[b]);
+    const sit = order.slice(0, n - playing), act = order.slice(n - playing);
+    let best = null, bestScore = Infinity;
+    for (let t = 0; t < 4000; t++) {
+      const p = shuffle(act.slice(), r); let sc = 0;
+      for (let c = 0; c < p.length; c += 4) {
+        const [a, b, x, y] = p.slice(c, c + 4);
+        sc += 10 * ((part[a][b] + 1) ** 2 + (part[x][y] + 1) ** 2);
+        sc += (opp[a][x] + 1) ** 2 + (opp[a][y] + 1) ** 2 + (opp[b][x] + 1) ** 2 + (opp[b][y] + 1) ** 2;
+      }
+      if (sc < bestScore) { bestScore = sc; best = p; }
+    }
+    const games = [];
+    for (let c = 0; c < best.length; c += 4) {
+      const [a, b, x, y] = best.slice(c, c + 4);
+      part[a][b]++; part[b][a]++; part[x][y]++; part[y][x]++;
+      for (const i of [a, b]) for (const j of [x, y]) { opp[i][j]++; opp[j][i]++; }
+      games.push([[a, b], [x, y]]);
+    }
+    sit.forEach(i => { sat[i]++; last[i] = k; });
+    out.push({ games, sit });
+  }
+  return { out, part, sat };
+}
+
+function names() { return $("names").value.split(/\n|,/).map(s => s.trim()).filter(Boolean); }
+
+function render() {
+  const ns = names(), courts = +$("courts").value || 1, rounds = +$("rounds").value || 1;
+  $("err").textContent = "";
+  if (ns.length < 4) { $("err").textContent = "Add at least 4 players."; return; }
+  if (ns.length > 48) { $("err").textContent = "48 players at most."; return; }
+  if (new Set(ns.map(s => s.toLowerCase())).size !== ns.length) { $("err").textContent = "Two players have the same name. Add an initial to tell them apart."; return; }
+  const c = Math.min(courts, Math.floor(ns.length / 4));
+  const { out, part, sat } = schedule(ns.length, c, Math.min(rounds, 30), seed);
+  const esc = s => s.replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+  const team = t => t.map(i => esc(ns[i])).join(" &amp; ");
+  let h = "<thead><tr><th>Round</th>" + [...Array(c)].map((_, i) => `<th>Court ${i + 1}</th>`).join("") + (out[0].sit.length ? "<th>Sitting out</th>" : "") + "</tr></thead><tbody>";
+  out.forEach((rd, k) => {
+    h += `<tr><td><b>${k + 1}</b></td>` + rd.games.map(g => `<td>${team(g[0])}<span class="v">vs</span>${team(g[1])}</td>`).join("");
+    if (rd.sit.length) h += `<td>${rd.sit.map(i => esc(ns[i])).join(", ")}</td>`;
+    h += "</tr>";
+  });
+  $("tbl").innerHTML = h + "</tbody>";
+  const distinct = part.map(row => row.filter(v => v > 0).length), repeats = part.flat().filter(v => v > 1).length / 2;
+  const sMin = Math.min(...sat), sMax = Math.max(...sat);
+  $("stats").textContent = `${ns.length} players, ${c} court${c > 1 ? "s" : ""}, ${out.length} rounds. ` +
+    `Each player partners ${Math.min(...distinct)}–${Math.max(...distinct)} different people; ${repeats ? repeats + " partner pair" + (repeats > 1 ? "s" : "") + " repeat." : "no partner repeats."}` +
+    (sMax ? ` Everyone sits out ${sMin === sMax ? sMin : sMin + "–" + sMax} time${sMax > 1 ? "s" : ""}.` : "") +
+    (c < courts ? ` Only ${c} court${c > 1 ? "s" : ""} can be filled with ${ns.length} players.` : "");
+  $("ph").textContent = `Round robin · ${ns.length} players · ${c} court${c > 1 ? "s" : ""}`;
+  $("out").style.display = "block";
+  history.replaceState(null, "", "#" + new URLSearchParams({ p: ns.join(","), c: courts, r: rounds, s: seed }));
+}
+
+$("f").addEventListener("submit", e => { e.preventDefault(); render(); $("out").scrollIntoView({ behavior: "smooth" }); });
+$("again").addEventListener("click", () => { seed = Math.floor(Math.random() * 1e9); render(); });
+$("share").addEventListener("click", () => navigator.clipboard.writeText(location.href).then(
+  () => $("share").textContent = "Link copied", () => $("share").textContent = "Copy the address bar"));
+
+const q = new URLSearchParams(location.hash.slice(1));
+if (q.get("p")) {
+  $("names").value = q.get("p").split(",").join("\n");
+  if (q.get("c")) $("courts").value = q.get("c");
+  if (q.get("r")) $("rounds").value = q.get("r");
+  if (q.get("s")) seed = +q.get("s");
+  render();
+}
+</script>
+</body>
+</html>
