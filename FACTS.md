@@ -204,3 +204,6 @@ Proposed a "what to watch before Avengers: Doomsday" planner and asked whether t
 
 ## 2026-10-17 — AI image API account
 Proposed a personalized comic cover gift and asked whether they have an account with an AI image service that has an API. The boss: "Yes I do, but do we think thats what it is?"
+
+## 2026-10-17 — what the boss wants
+After the comic cover idea. The boss: "I want something big. I have wanted something big for a long time. Something computer related. AI related. IDK"
