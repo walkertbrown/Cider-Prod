@@ -16,6 +16,7 @@
 :root{--bg:#fbf7ee;--fg:#1b1a17;--muted:#5d584d;--line:#e3dccb;--card:#fff;--accent:#d7372b;--accent-fg:#fff;--hi:#fff3cf}
 @media (prefers-color-scheme:dark){:root{--bg:#141310;--fg:#efe9db;--muted:#a49d8c;--line:#2d2a22;--card:#1c1b16;--accent:#ff5a4a;--accent-fg:#141310;--hi:#2a2414}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:1000px;margin:0 auto;padding:32px 16px 72px}
 a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:3px}
@@ -38,6 +39,14 @@ input[type=file]{font:inherit;width:100%}
 .sw i{display:inline-block;width:22px;height:22px;border-radius:50%;border:2px solid var(--fg)}
 button,.btn{display:inline-block;background:var(--accent);color:var(--accent-fg);border:0;border-radius:8px;padding:12px 18px;font:inherit;font-weight:600;cursor:pointer;margin:14px 8px 0 0;text-decoration:none}
 button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+select{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.view{margin-bottom:12px}
+.view label{border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer;background:var(--card)}
+.view label:has(input:checked){border-color:var(--accent);font-weight:600}
+.view input{accent-color:var(--accent)}
+#slabopts{margin-bottom:12px}
+#slabopts label{margin-top:0}
+#sl{width:100%;height:auto;display:block}
 #cv{width:100%;height:auto;display:block;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.25);background:#ddd}
 .stick{position:sticky;top:16px}
 @media (max-width:720px){.stick{position:static;order:-1}}
@@ -57,7 +66,7 @@ ul{padding-left:20px}li{margin:6px 0}
 #status{font-weight:600;min-height:1.5em;margin-top:10px}
 button:disabled{opacity:.55;cursor:wait}
 footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-size:14px;color:var(--muted)}
-@media print{body{background:#fff}main>*:not(.grid),.grid>.panel,.grid .acts,footer{display:none!important}.grid{display:block;margin:0}#cv{box-shadow:none;border-radius:0;width:6.625in;height:10.25in}main{padding:0}}
+@media print{body{background:#fff}main>*:not(.grid),.grid>.panel,.grid .acts,.grid .view,#slabopts,footer{display:none!important}#sl{width:6.27in;height:10.25in}.grid{display:block;margin:0}#cv{box-shadow:none;border-radius:0;width:6.625in;height:10.25in}main{padding:0}}
 </style>
 </head>
 <body>
@@ -110,6 +119,21 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-si
   </div>
 </form>
 <div class="stick">
+  <div class="sw view" role="radiogroup" aria-label="View">
+    <label><input type="radio" name="view" value="cover" checked>Cover</label>
+    <label><input type="radio" name="view" value="slab">Slab it</label>
+  </div>
+  <div id="slabopts" hidden>
+    <div class="row">
+      <div><label for="grade">Grade</label>
+        <select id="grade">
+          <option>10.0</option><option selected>9.8</option><option>9.6</option><option>9.4</option><option>9.0</option>
+          <option>8.0</option><option>6.0</option><option>4.0</option><option>2.0</option><option>0.5</option>
+        </select></div>
+      <div><label for="note">Grader's note</label><input id="note" type="text" maxlength="60" value="Minor wear from saving Christmas."></div>
+    </div>
+  </div>
+  <canvas id="sl" width="1700" height="2720" hidden aria-label="Your cover in a graded comic case"></canvas>
   <canvas id="cv" width="1325" height="2050" aria-label="Your comic book cover"></canvas>
   <div class="acts">
     <button type="button" id="dl">Download the cover</button>
@@ -135,6 +159,7 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-si
   <li><b>Dad or grandpa:</b> "The Amazing Super Dad", with the thing he always fixes as the big line.</li>
   <li><b>A kid's birthday:</b> their name as the title, "First appearance!" in the burst, the party date on the cover.</li>
   <li><b>A retirement or a coworker leaving:</b> "The Last Shift", with the inside joke as the big line.</li>
+  <li><b>A collector:</b> press <b>Slab it</b> and give them a 9.8 of themselves, sealed in a graded case. (A pretend one: our own made-up grading label, for fun.)</li>
   <li><b>A couple:</b> both in one photo, "The Adventures of…" above their names.</li>
 </ul>
 <p>The heroes are yours. Use original names; Marvel and DC logos and characters belong to them.</p>
@@ -292,7 +317,80 @@ function draw() {
   for (let i = 0; x < 348; i++) { const bw = 2 + ((seed >> (i % 28)) & 3) * 2; if (i % 2 === 0) ctx.fillRect(x, H - 172, bw, 82); x += bw + 2; }
   ctx.font = `600 17px system-ui, sans-serif`; ctx.textAlign = "center";
   ctx.fillText("comiccover.bananafest-destiny.com", 205, H - 60);
+  if (slabOn()) drawSlab();
 }
+
+// "Slab it": the cover sealed in a graded case, with our own made-up label.
+const SW = 1700, SH = 2720, sl = $("sl"), sx = sl.getContext("2d");
+const GRADES = { "10.0": "GEM MINT", "9.8": "NEAR MINT/MINT", "9.6": "NEAR MINT+", "9.4": "NEAR MINT", "9.0": "VERY FINE/NEAR MINT",
+  "8.0": "VERY FINE", "6.0": "FINE", "4.0": "VERY GOOD", "2.0": "GOOD", "0.5": "POOR" };
+function slabOn() { return pick("view") === "slab"; }
+function fitG(g, text, maxW, size, min, fam) {
+  do { g.font = fam(size); if (g.measureText(text).width <= maxW) break; size -= 2; } while (size > min);
+}
+function wrapG(g, text, maxW) {
+  const words = text.split(/\s+/), lines = []; let line = "";
+  for (const w of words) { const t = line ? line + " " + w : w; if (g.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line); return lines;
+}
+function drawSlab() {
+  const T = THEMES[pick("c")], g = sx, sans = w => s => `${w} ${s}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+  g.clearRect(0, 0, SW, SH);
+  // the plastic shell
+  let gr = g.createLinearGradient(0, 0, SW, SH);
+  gr.addColorStop(0, "#f1f5f8"); gr.addColorStop(.5, "#d3dbe1"); gr.addColorStop(1, "#e8eef2");
+  g.beginPath(); g.roundRect(10, 10, SW - 20, SH - 20, 70); g.fillStyle = gr; g.fill();
+  g.lineWidth = 6; g.strokeStyle = "#95a2ac"; g.stroke();
+  g.beginPath(); g.roundRect(42, 42, SW - 84, SH - 84, 48); g.lineWidth = 3; g.strokeStyle = "rgba(255,255,255,.95)"; g.stroke();
+  // label
+  const LX = 80, LY = 80, LW = SW - 160, LH = 470;
+  g.save(); g.shadowColor = "rgba(0,0,0,.18)"; g.shadowBlur = 12; g.shadowOffsetY = 4;
+  g.beginPath(); g.roundRect(LX, LY, LW, LH, 18); g.fillStyle = "#fff"; g.fill(); g.restore();
+  g.save(); g.beginPath(); g.roundRect(LX, LY, LW, LH, 18); g.clip();
+  g.fillStyle = T.main; g.fillRect(LX, LY, LW, 92); g.fillStyle = T.band; g.fillRect(LX, LY + 92, LW, 10);
+  g.restore();
+  g.beginPath(); g.roundRect(LX, LY, LW, LH, 18); g.lineWidth = 4; g.strokeStyle = "#7d8a94"; g.stroke();
+  g.fillStyle = "#fff"; g.textAlign = "left"; g.font = `60px ${FONT}`; g.fillText("COMIC COVER GRADING", LX + 30, LY + 70);
+  g.textAlign = "right"; g.font = sans(700)(26); g.fillText("UNOFFICIAL · FOR FUN", LX + LW - 30, LY + 58);
+  // grade box
+  const gv = $("grade").value, gx = LX + 30, gy = LY + 128, gw = 330, gh = 312;
+  g.beginPath(); g.roundRect(gx, gy, gw, gh, 14); g.fillStyle = T.dark; g.fill();
+  g.fillStyle = "#fff"; g.textAlign = "center"; g.font = `200px ${FONT}`; g.fillText(gv, gx + gw / 2, gy + 205);
+  fitG(g, GRADES[gv], gw - 30, 30, 18, sans(800)); g.fillText(GRADES[gv], gx + gw / 2, gy + 268);
+  // the facts
+  const tx = gx + gw + 40, tw = LX + LW - 30 - tx;
+  const title = (val("title") || "Your Name").toUpperCase(), issue = val("issue") || "1";
+  g.textAlign = "left"; g.fillStyle = "#111";
+  fitG(g, `${title} #${issue}`, tw, 66, 30, sans(800)); g.fillText(`${title} #${issue}`, tx, gy + 58);
+  g.fillStyle = "#444"; const sub = [val("small"), val("date")].filter(Boolean).join(" · ");
+  fitG(g, sub, tw, 36, 20, sans(600)); g.fillText(sub, tx, gy + 110);
+  const burst = val("burst"); if (burst) { fitG(g, burst, tw, 32, 20, sans(500)); g.fillText(burst, tx, gy + 156); }
+  g.fillStyle = "#111"; g.font = sans(500)(30);
+  const note = val("note"), nl = note ? wrapG(g, "Grader's notes: " + note, tw).slice(0, 2) : [];
+  nl.forEach((l, i) => g.fillText(l, tx, gy + 214 + i * 40));
+  const seed = (title + issue + val("small")).split("").reduce((s, ch) => s * 31 + ch.charCodeAt(0) >>> 0, 11);
+  const serial = String(seed).padStart(10, "0");
+  g.font = sans(700)(26); g.fillStyle = "#555"; g.fillText("WHITE PAGES", tx, gy + gh - 4);
+  g.textAlign = "right"; g.fillText(`No. ${serial.slice(0, 4)}-${serial.slice(4)}-001`, LX + LW - 30, gy + gh - 4);
+  // the well and the cover
+  const cw = 1250, ch = Math.round(cw * H / W), cx = (SW - cw) / 2, cy = LY + LH + 60;
+  g.beginPath(); g.roundRect(cx - 30, cy - 30, cw + 60, ch + 60, 22); g.fillStyle = "rgba(255,255,255,.45)"; g.fill();
+  g.lineWidth = 3; g.strokeStyle = "#a6b2ba"; g.stroke();
+  g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 18; g.shadowOffsetY = 6; g.drawImage(cv, cx, cy, cw, ch); g.restore();
+  // glare on the plastic
+  g.save(); g.beginPath(); g.roundRect(10, 10, SW - 20, SH - 20, 70); g.clip();
+  gr = g.createLinearGradient(0, SH * .25, SW, SH * .55);
+  gr.addColorStop(0, "rgba(255,255,255,0)"); gr.addColorStop(.42, "rgba(255,255,255,0)"); gr.addColorStop(.5, "rgba(255,255,255,.22)");
+  gr.addColorStop(.56, "rgba(255,255,255,0)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, SW, SH); g.restore();
+  g.fillStyle = "rgba(70,85,95,.75)"; g.textAlign = "center"; g.font = sans(600)(26);
+  g.fillText("SEALED AT COMICCOVER.BANANAFEST-DESTINY.COM", SW / 2, SH - 52);
+}
+function setView() {
+  const on = slabOn(); sl.hidden = !on; cv.hidden = on; $("slabopts").hidden = !on; draw();
+}
+document.querySelectorAll("input[name=view]").forEach(r => r.addEventListener("change", setView));
+$("grade").addEventListener("change", draw); $("note").addEventListener("input", draw);
 
 let photo = null;
 $("photo").addEventListener("change", e => {
@@ -302,9 +400,9 @@ $("photo").addEventListener("change", e => {
 $("f").addEventListener("input", draw);
 $("f").addEventListener("submit", e => e.preventDefault());
 $("dl").addEventListener("click", () => {
-  cv.toBlob(b => {
+  (slabOn() ? sl : cv).toBlob(b => {
     const a = document.createElement("a"); a.href = URL.createObjectURL(b);
-    a.download = ((val("title") || "comic").replace(/[^\w-]+/g, "-").toLowerCase() || "comic") + "-cover.png";
+    a.download = ((val("title") || "comic").replace(/[^\w-]+/g, "-").toLowerCase() || "comic") + (slabOn() ? "-slab.png" : "-cover.png");
     document.body.appendChild(a); a.click(); a.remove();
   }, "image/png");
 });
@@ -315,7 +413,7 @@ function setOn(n) { for (const b of $("gal").children) b.classList.toggle("on", 
 function useDrawing(n) {
   const im = drawings[n]; if (!im) return;
   img = im; art = null; document.querySelector('input[name=fx][value="0"]').checked = true; setOn(n); draw();
-  if (innerWidth <= 720) cv.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (innerWidth <= 720) (slabOn() ? sl : cv).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 async function addDrawing(n) {
   if (drawings[n]) return;
