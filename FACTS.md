@@ -210,3 +210,6 @@ After the comic cover idea. The boss: "I want something big. I have wanted somet
 
 ## 2026-10-17 — direction: VibeCider is the big thing
 Recommended making VibeCider itself prove out (first paying client) and building the comic cover as the bot's next public demo before Christmas. The boss: "yes I agree. Lets stick with this. Do your job"
+
+## 2026-10-17 — AI comic cover payments
+Asked whether AI cover sales go to the same Stripe account as the $50 VibeCider link or a different one. The boss: "same"
