@@ -174,3 +174,6 @@ The boss: "thats stupid and unnecessary, no one will find us through posting wit
 
 ## 2026-10-16 — Pinterest
 Proposed Pinterest in place of Instagram. The boss: "pinterest calls the site spam"
+
+## 2026-10-16 — claiming an idea
+Asked: can each idea on the app-ideas list be claimed, the first person to pay $50 gets it built for them and it comes off the list? The boss: "Yeah that would be fine"
