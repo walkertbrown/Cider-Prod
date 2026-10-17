@@ -195,3 +195,12 @@ Asked to request indexing for /app-ideas/ and the Round Robin demo. The boss: "I
 
 ## 2026-10-17 — Instagram bio
 Asked what URL is in the vibeciders Instagram bio. The boss: "I have every bananafest subdomain"
+
+## 2026-10-17 — what the boss knows (for idea hunting)
+Asked what job, hobby or chore they have spent the most hours on. The boss: "I work in restaurants.... have forever, but I am tired of thinking of restaurant apps. [family detail left out of the public repo] I used to be a big superhero, toy and comic collector. And now I know about AI and VibeCoding... TV and Movies, Actors, Pop-Culture revolving around that"
+
+## 2026-10-17 — Doomsday catch-up planner
+Proposed a "what to watch before Avengers: Doomsday" planner and asked whether they have seen every MCU film and show since Endgame. The boss: "Yes I have, but thats not something to sell. Definitely not a FANTASTIC idea..... it needs to be something broad."
+
+## 2026-10-17 — AI image API account
+Proposed a personalized comic cover gift and asked whether they have an account with an AI image service that has an API. The boss: "Yes I do, but do we think thats what it is?"

@@ -191,3 +191,9 @@ the page and "Unproven" in the captions.
 The vibeciders bio lists every bananafest subdomain, so "link in bio" in a
 reel caption does lead to vibecider.bananafest-destiny.com. Still name the
 exact domain in the caption, so a viewer knows which of the links to tap.
+
+## What the boss calls a good idea
+Rejected: restaurant apps (tired of them), tip pool calculator, the Doomsday
+catch-up planner ("not something to sell… it needs to be something broad").
+So a candidate needs a wide buyer pool and a thing people already pay for.
+A niche search with no paid action is not enough, however well it fits them.
