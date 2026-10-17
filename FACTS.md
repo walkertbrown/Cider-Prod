@@ -226,3 +226,8 @@ The boss sent a new Cloudflare API token: "use this one". Stored in the
 gitignored credentials file as the deploy token (value never written here).
 The $9 link's redirect to /paid?session_id={CHECKOUT_SESSION_ID} is now
 verified through the Stripe API.
+
+## 2026-10-17 — Comic Cover short on TikTok
+The boss: "I can just post it if you give it to me. Can you do some comic book
+superhero type music?" Then, after the scored version: "It is posted." The
+boss posted the Comic Cover short to TikTok by hand (not through Buffer).
