@@ -183,3 +183,6 @@ Proposed a tip pool calculator for restaurants as app idea #1. The boss: "That i
 
 ## 2026-10-17 — the five app ideas
 The boss: "I do not think those would. make money, but whatever you think, I guess"
+
+## 2026-10-17 — the boss's own ideas
+Asked what kind of idea makes money. The boss: "I really do not know. I feel like I have tried so many ideas and they usually get shut down before even being made"
