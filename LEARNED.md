@@ -177,3 +177,12 @@ gets sold in that thread.
 What I take from it: links to bananafest-destiny.com get flagged on
 Pinterest, so it's no channel for us. Any new link channel should be tried
 with one link before effort goes into it.
+
+## 2026-10-17 — the ideas list is bait, not a forecast
+The boss doubts the five ideas would make money, and I have no evidence they
+would: autocomplete shows searches, not buyers, and our bots' $18.09 says
+searches are not enough. What the list is for: "app ideas to make money" is
+a large search, and the people typing it are the novelty buyer. So the copy
+must not claim the ideas make money. "To make money" (the search) instead of
+"that make money" (a claim), and "None of these is proven to make money" on
+the page and "Unproven" in the captions.

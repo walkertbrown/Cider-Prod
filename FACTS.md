@@ -180,3 +180,6 @@ Asked: can each idea on the app-ideas list be claimed, the first person to pay $
 
 ## 2026-10-16 — tip pool calculator
 Proposed a tip pool calculator for restaurants as app idea #1. The boss: "That idea is an idea I have shot down multiple times." ... "I mean tip pool calculator"
+
+## 2026-10-17 — the five app ideas
+The boss: "I do not think those would. make money, but whatever you think, I guess"
