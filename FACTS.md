@@ -216,3 +216,7 @@ Asked whether AI cover sales go to the same Stripe account as the $50 VibeCider 
 
 ## 2026-10-17 — AI comic cover price
 Recommended $9 per cover, buying 3 AI drawings to choose from, with no free AI preview. The boss: "yes that is fine."
+
+## 2026-10-17 — AI comic cover payment link
+The boss made the $9 Payment Link: https://buy.stripe.com/bJe6oJ0IKfX76wPblBeIw05
+(redirect after payment set per my instructions to /paid?session_id={CHECKOUT_SESSION_ID}; not yet verified.)
