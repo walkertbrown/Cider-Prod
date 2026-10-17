@@ -197,3 +197,11 @@ Rejected: restaurant apps (tired of them), tip pool calculator, the Doomsday
 catch-up planner ("not something to sell… it needs to be something broad").
 So a candidate needs a wide buyer pool and a thing people already pay for.
 A niche search with no paid action is not enough, however well it fits them.
+
+## AI comic covers are the product, the browser effect is the free taste
+On 17 Oct both gpt-image-2 and gemini-3.1-flash-image turned a plain dog photo
+into a convincing superhero comic illustration that still looks like that dog.
+The canvas posterize/halftone effect is fine for free, but it looks like a
+filter. The AI version looks like something a person would pay to give. Any
+paid version must generate on a server after payment, never with a key in the
+page.

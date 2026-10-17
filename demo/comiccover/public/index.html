@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Custom comic book cover maker: put your photo on a comic cover | Comic Cover</title>
+<meta name="description" content="Free custom comic book cover maker. Add a photo, type the title, issue number and the big line, and download a print-size personalized comic book cover. A gift in two minutes. No sign-up; your photo never leaves your device.">
+<link rel="canonical" href="https://comiccover.bananafest-destiny.com/">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<meta property="og:title" content="Custom comic book cover maker">
+<meta property="og:description" content="Put anyone on the cover of their own comic. Free, print-size, no sign-up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&display=block" rel="stylesheet">
+<style>
+:root{--bg:#fbf7ee;--fg:#1b1a17;--muted:#5d584d;--line:#e3dccb;--card:#fff;--accent:#d7372b;--accent-fg:#fff;--hi:#fff3cf}
+@media (prefers-color-scheme:dark){:root{--bg:#141310;--fg:#efe9db;--muted:#a49d8c;--line:#2d2a22;--card:#1c1b16;--accent:#ff5a4a;--accent-fg:#141310;--hi:#2a2414}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:0 auto;padding:32px 16px 72px}
+a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:3px}
+h1{font-size:clamp(28px,6vw,44px);line-height:1.1;margin:0 0 12px;letter-spacing:-.02em}
+h2{font-size:22px;margin:40px 0 10px}
+p{margin:0 0 12px}
+.lede{color:var(--muted);font-size:18px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start;margin-top:20px}
+@media (max-width:720px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+label{display:block;font-weight:600;margin:14px 0 4px}
+label:first-child{margin-top:0}
+.hint{font-weight:400;font-size:14px;color:var(--muted)}
+input[type=text],textarea{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:70px;resize:vertical}
+input[type=file]{font:inherit;width:100%}
+.row{display:grid;grid-template-columns:1fr 2fr;gap:12px}
+.sw{display:flex;gap:10px;flex-wrap:wrap}
+.sw label{margin:0;font-weight:400;display:flex;align-items:center;gap:6px}
+.sw i{display:inline-block;width:22px;height:22px;border-radius:50%;border:2px solid var(--fg)}
+button,.btn{display:inline-block;background:var(--accent);color:var(--accent-fg);border:0;border-radius:8px;padding:12px 18px;font:inherit;font-weight:600;cursor:pointer;margin:14px 8px 0 0;text-decoration:none}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+#cv{width:100%;height:auto;display:block;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.25);background:#ddd}
+.stick{position:sticky;top:16px}
+@media (max-width:720px){.stick{position:static;order:-1}}
+.note{font-size:14px;color:var(--muted)}
+.demo{border-left:4px solid var(--accent);padding:10px 14px;background:var(--hi);border-radius:0 8px 8px 0;font-size:15px}
+ul{padding-left:20px}li{margin:6px 0}
+footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-size:14px;color:var(--muted)}
+@media print{body{background:#fff}main>*:not(.grid),.grid>.panel,.grid .acts,footer{display:none!important}.grid{display:block;margin:0}#cv{box-shadow:none;border-radius:0;width:6.625in;height:10.25in}main{padding:0}}
+</style>
+</head>
+<body>
+<main>
+<h1>Custom comic book cover maker</h1>
+<p class="lede">Put anyone on the cover of their own comic. Add a photo, name the series, write the big line, and download a print-size cover. Free, no sign-up, and the photo never leaves your device.</p>
+
+<div class="grid">
+<form class="panel" id="f" autocomplete="off">
+  <label for="photo">Photo <span class="hint">A face or a whole person, well lit. Stays on your device.</span></label>
+  <input id="photo" type="file" accept="image/*">
+  <label for="small">Small line above the title</label>
+  <input id="small" type="text" value="The Amazing" maxlength="30">
+  <label for="title">Title <span class="hint">The hero. Short is louder.</span></label>
+  <input id="title" type="text" value="Super Dad" maxlength="24">
+  <div class="row">
+    <div><label for="issue">Issue No.</label><input id="issue" type="text" value="1" maxlength="4"></div>
+    <div><label for="date">Date on the cover</label><input id="date" type="text" value="Dec 2026" maxlength="12"></div>
+  </div>
+  <label for="burst">Burst <span class="hint">The yellow star.</span></label>
+  <input id="burst" type="text" value="First appearance!" maxlength="28">
+  <label for="cap">The big line <span class="hint">Bottom of the cover. One sentence.</span></label>
+  <textarea id="cap" maxlength="90">He fixed the Wi-Fi. Now he must save Christmas!</textarea>
+  <label>Color</label>
+  <div class="sw" id="sw">
+    <label><input type="radio" name="c" value="red" checked><i style="background:#d7372b"></i>Red</label>
+    <label><input type="radio" name="c" value="blue"><i style="background:#1f5fd6"></i>Blue</label>
+    <label><input type="radio" name="c" value="green"><i style="background:#22964a"></i>Green</label>
+    <label><input type="radio" name="c" value="purple"><i style="background:#7a3fe0"></i>Purple</label>
+  </div>
+  <label for="ink">Comic effect on the photo</label>
+  <div class="sw">
+    <label><input type="radio" name="fx" value="2" checked>Strong</label>
+    <label><input type="radio" name="fx" value="1">Light</label>
+    <label><input type="radio" name="fx" value="0">None</label>
+  </div>
+</form>
+<div class="stick">
+  <canvas id="cv" width="1325" height="2050" aria-label="Your comic book cover"></canvas>
+  <div class="acts">
+    <button type="button" id="dl">Download the cover</button>
+    <button type="button" class="ghost" onclick="window.print()">Print</button>
+  </div>
+  <p class="note">1325 × 2050 pixels: the size of a real comic (6.625 × 10.25 in) at 200 dpi. Print it on card stock at any photo shop, or frame it.</p>
+</div>
+</div>
+
+<h2>Gift ideas that work</h2>
+<ul>
+  <li><b>Dad or grandpa:</b> "The Amazing Super Dad", with the thing he always fixes as the big line.</li>
+  <li><b>A kid's birthday:</b> their name as the title, "First appearance!" in the burst, the party date on the cover.</li>
+  <li><b>A retirement or a coworker leaving:</b> "The Last Shift", with the inside joke as the big line.</li>
+  <li><b>A couple:</b> both in one photo, "The Adventures of…" above their names.</li>
+</ul>
+<p>The heroes are yours. Use original names; Marvel and DC logos and characters belong to them.</p>
+
+<p class="demo">This app was built by an AI bot as a demo of what a <a href="https://vibecider.bananafest-destiny.com/">VibeCider bot</a> makes: one small web app, one job, live on its own domain. A paid version (an AI-drawn cover in real comic art style) is not built. Have an idea of your own? A bot builds it and markets it for $50 the first month.</p>
+
+<footer>
+  Built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>. Its log is public at
+  <a href="https://github.com/walkertbrown/Cider-Prod">github.com/walkertbrown/Cider-Prod</a>.
+</footer>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const W = 1325, H = 2050, BAND = 430;
+const THEMES = {
+  red:    { main: "#d7372b", dark: "#8e1c14", band: "#ffd23f" },
+  blue:   { main: "#1f5fd6", dark: "#0f2f75", band: "#ffd23f" },
+  green:  { main: "#22964a", dark: "#0f4d24", band: "#ffe45c" },
+  purple: { main: "#7a3fe0", dark: "#3b1677", band: "#ffd23f" },
+};
+const cv = $("cv"), ctx = cv.getContext("2d");
+let img = null, art = null, artKey = "";
+const FONT = '"Bangers", Impact, "Arial Black", sans-serif';
+
+function val(id) { return $(id).value.trim(); }
+function pick(name) { return document.querySelector(`input[name=${name}]:checked`).value; }
+
+function fit(text, maxW, size, min = 30) {
+  do { ctx.font = `${size}px ${FONT}`; if (ctx.measureText(text).width <= maxW) break; size -= 4; } while (size > min);
+  return size;
+}
+function wrap(text, maxW) {
+  const words = text.split(/\s+/), lines = []; let line = "";
+  for (const w of words) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line); return lines;
+}
+
+// Comic effect: smooth, posterize, ink the edges. Cached per photo + strength.
+function comicArt(strength) {
+  const key = (img ? img.src : "none") + strength;
+  if (art && artKey === key) return art;
+  const c = document.createElement("canvas"); c.width = W; c.height = H - BAND;
+  const g = c.getContext("2d");
+  if (!img) { art = null; artKey = key; return null; }
+  const s = Math.max(W / img.width, (H - BAND) / img.height);
+  const dw = img.width * s, dh = img.height * s;
+  g.drawImage(img, (W - dw) / 2, ((H - BAND) - dh) / 3, dw, dh);
+  if (strength > 0) {
+    const w = c.width, h = c.height, id = g.getImageData(0, 0, w, h), d = id.data;
+    // box blur on luminance for edges
+    const lum = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i++) lum[i] = .3 * d[i * 4] + .59 * d[i * 4 + 1] + .11 * d[i * 4 + 2];
+    const bl = new Float32Array(w * h), r = 2;
+    for (let y = 0; y < h; y++) { let acc = 0; for (let x = -r; x <= r; x++) acc += lum[y * w + Math.min(w - 1, Math.max(0, x))];
+      for (let x = 0; x < w; x++) { bl[y * w + x] = acc / (2 * r + 1); acc += lum[y * w + Math.min(w - 1, x + r + 1)] - lum[y * w + Math.max(0, x - r)]; } }
+    const lv = strength > 1 ? 4 : 6, sat = strength > 1 ? 1.5 : 1.25, con = strength > 1 ? 1.25 : 1.12;
+    const th = strength > 1 ? 28 : 44;
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x, p = i * 4;
+      const gx = -bl[i - w - 1] - 2 * bl[i - 1] - bl[i + w - 1] + bl[i - w + 1] + 2 * bl[i + 1] + bl[i + w + 1];
+      const gy = -bl[i - w - 1] - 2 * bl[i - w] - bl[i - w + 1] + bl[i + w - 1] + 2 * bl[i + w] + bl[i + w + 1];
+      const L = lum[i];
+      for (let k = 0; k < 3; k++) {
+        let v = L + (d[p + k] - L) * sat; v = (v - 128) * con + 128;
+        v = Math.round(Math.max(0, Math.min(255, v)) / 255 * (lv - 1)) / (lv - 1) * 255;
+        d[p + k] = v;
+      }
+      if (Math.hypot(gx, gy) / 4 > th) { d[p] = d[p + 1] = d[p + 2] = 18; }
+    }
+    g.putImageData(id, 0, 0);
+    // halftone dots in the shadows
+    const cell = strength > 1 ? 14 : 18; g.fillStyle = "rgba(0,0,0,.22)";
+    for (let y = 0; y < h; y += cell) for (let x = (y / cell) % 2 ? cell / 2 : 0; x < w; x += cell) {
+      const L = lum[Math.min(h - 1, y) * w + Math.min(w - 1, Math.floor(x))] / 255;
+      const rad = cell * .5 * Math.max(0, .75 - L) / .75;
+      if (rad > .6) { g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill(); }
+    }
+  }
+  art = c; artKey = key; return art;
+}
+
+function star(cx, cy, r1, r2, n, rot) {
+  ctx.beginPath();
+  for (let i = 0; i < n * 2; i++) { const r = i % 2 ? r2 : r1, a = rot + i * Math.PI / n; ctx[i ? "lineTo" : "moveTo"](cx + r * Math.cos(a), cy + r * Math.sin(a)); }
+  ctx.closePath();
+}
+
+function draw() {
+  const T = THEMES[pick("c")], fx = +pick("fx");
+  ctx.clearRect(0, 0, W, H);
+  // art area
+  const a = comicArt(fx);
+  if (a) ctx.drawImage(a, 0, BAND);
+  else {
+    ctx.fillStyle = T.dark; ctx.fillRect(0, BAND, W, H - BAND);
+    ctx.save(); ctx.translate(W / 2, BAND + 620); ctx.fillStyle = T.main;
+    for (let i = 0; i < 24; i += 2) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 1800, i * Math.PI / 12, (i + 1) * Math.PI / 12); ctx.fill(); }
+    ctx.restore();
+    ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.font = `90px ${FONT}`; ctx.textAlign = "center";
+    ctx.fillText("ADD A PHOTO", W / 2, BAND + 650);
+  }
+  // masthead band
+  ctx.fillStyle = T.band; ctx.fillRect(0, 0, W, BAND);
+  ctx.fillStyle = "rgba(0,0,0,.07)";
+  for (let y = 6; y < BAND; y += 16) for (let x = (y / 16) % 2 ? 8 : 0; x < W; x += 16) { ctx.beginPath(); ctx.arc(x, y, 3.2, 0, 7); ctx.fill(); }
+  ctx.fillStyle = "#111"; ctx.fillRect(0, BAND - 10, W, 10);
+  // corner box
+  ctx.fillStyle = "#fff"; ctx.strokeStyle = "#111"; ctx.lineWidth = 8;
+  ctx.fillRect(40, 40, 200, 250); ctx.strokeRect(40, 40, 200, 250);
+  ctx.fillStyle = "#111"; ctx.textAlign = "center";
+  ctx.font = `44px ${FONT}`; ctx.fillText("NO.", 140, 100);
+  fit(val("issue") || "1", 170, 120); ctx.fillText(val("issue") || "1", 140, 215);
+  ctx.font = `36px ${FONT}`; fit((val("date") || "").toUpperCase(), 180, 36, 18); ctx.fillText((val("date") || "").toUpperCase(), 140, 268);
+  // small line + title
+  const L = 280, R = W - 40, mid = (L + R) / 2;
+  const small = (val("small") || "").toUpperCase(), title = (val("title") || "Your Name").toUpperCase();
+  ctx.save(); ctx.translate(mid, 0); ctx.rotate(-0.025);
+  fit(small, R - L - 40, 78); ctx.lineWidth = 10; ctx.strokeStyle = "#111"; ctx.lineJoin = "round";
+  ctx.strokeText(small, 0, 120); ctx.fillStyle = "#fff"; ctx.fillText(small, 0, 120);
+  const ts = fit(title, R - L - 20, 250, 60);
+  const ty = 140 + Math.min(250, ts) * .95 + (250 - Math.min(250, ts)) * .4;
+  ctx.lineWidth = Math.max(10, ts * .1); ctx.strokeStyle = "#111";
+  ctx.strokeText(title, 8, ty + 10);
+  const grad = ctx.createLinearGradient(0, ty - ts * .8, 0, ty); grad.addColorStop(0, T.main); grad.addColorStop(1, T.dark);
+  ctx.strokeText(title, 0, ty); ctx.fillStyle = grad; ctx.fillText(title, 0, ty);
+  ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.strokeText(title, -3, ty - 3);
+  ctx.restore();
+  // burst
+  const burst = (val("burst") || "").toUpperCase();
+  if (burst) {
+    ctx.save(); ctx.translate(W - 230, BAND + 230); ctx.rotate(-0.2);
+    star(0, 0, 210, 150, 14, 0); ctx.fillStyle = "#ffe23a"; ctx.fill(); ctx.lineWidth = 9; ctx.strokeStyle = "#111"; ctx.stroke();
+    ctx.fillStyle = T.main; ctx.textAlign = "center"; ctx.font = `64px ${FONT}`;
+    let lines = wrap(burst, 230); let fs = 64;
+    while ((lines.length > 3 || lines.some(l => ctx.measureText(l).width > 250)) && fs > 30) { fs -= 4; ctx.font = `${fs}px ${FONT}`; lines = wrap(burst, 230); }
+    lines.forEach((l, i) => ctx.fillText(l, 0, (i - (lines.length - 1) / 2) * fs * 1.0 + fs * .35));
+    ctx.restore();
+  }
+  // caption box
+  const cap = (val("cap") || "").toUpperCase();
+  if (cap) {
+    let fs = 78; ctx.font = `${fs}px ${FONT}`; let lines = wrap(cap, W - 200);
+    while (lines.length > 2 && fs > 40) { fs -= 4; ctx.font = `${fs}px ${FONT}`; lines = wrap(cap, W - 200); }
+    const bh = lines.length * fs * 1.08 + 50, by = H - 230 - bh;
+    ctx.save(); ctx.translate(W / 2, by + bh / 2); ctx.rotate(0.012);
+    ctx.fillStyle = "#fff"; ctx.strokeStyle = "#111"; ctx.lineWidth = 9;
+    ctx.fillRect(-(W - 120) / 2, -bh / 2, W - 120, bh); ctx.strokeRect(-(W - 120) / 2, -bh / 2, W - 120, bh);
+    ctx.fillStyle = "#111"; ctx.textAlign = "center";
+    lines.forEach((l, i) => ctx.fillText(l, 0, -bh / 2 + 25 + fs * .85 + i * fs * 1.08));
+    ctx.restore();
+  }
+  // barcode box
+  ctx.fillStyle = "#fff"; ctx.fillRect(40, H - 190, 330, 150); ctx.strokeStyle = "#111"; ctx.lineWidth = 5; ctx.strokeRect(40, H - 190, 330, 150);
+  ctx.fillStyle = "#111"; let x = 62; const seed = (title + small).split("").reduce((s, ch) => s * 31 + ch.charCodeAt(0) >>> 0, 7);
+  for (let i = 0; x < 348; i++) { const bw = 2 + ((seed >> (i % 28)) & 3) * 2; if (i % 2 === 0) ctx.fillRect(x, H - 172, bw, 82); x += bw + 2; }
+  ctx.font = `600 17px system-ui, sans-serif`; ctx.textAlign = "center";
+  ctx.fillText("comiccover.bananafest-destiny.com", 205, H - 60);
+}
+
+$("photo").addEventListener("change", e => {
+  const file = e.target.files[0]; if (!file) return;
+  const im = new Image(); im.onload = () => { img = im; art = null; draw(); }; im.src = URL.createObjectURL(file);
+});
+$("f").addEventListener("input", draw);
+$("f").addEventListener("submit", e => e.preventDefault());
+$("dl").addEventListener("click", () => {
+  cv.toBlob(b => {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(b);
+    a.download = ((val("title") || "comic").replace(/[^\w-]+/g, "-").toLowerCase() || "comic") + "-cover.png";
+    document.body.appendChild(a); a.click(); a.remove();
+  }, "image/png");
+});
+document.fonts.load(`80px ${FONT}`).then(draw, draw);
+draw();
+</script>
+</body>
+</html>
