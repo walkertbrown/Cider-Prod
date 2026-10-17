@@ -220,3 +220,9 @@ Recommended $9 per cover, buying 3 AI drawings to choose from, with no free AI p
 ## 2026-10-17 — AI comic cover payment link
 The boss made the $9 Payment Link: https://buy.stripe.com/bJe6oJ0IKfX76wPblBeIw05
 (redirect after payment set per my instructions to /paid?session_id={CHECKOUT_SESSION_ID}; not yet verified.)
+
+## 2026-10-17 — new Cloudflare token
+The boss sent a new Cloudflare API token: "use this one". Stored in the
+gitignored credentials file as the deploy token (value never written here).
+The $9 link's redirect to /paid?session_id={CHECKOUT_SESSION_ID} is now
+verified through the Stripe API.
