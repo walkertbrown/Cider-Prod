@@ -233,3 +233,11 @@ or someone sitting on a half-built one.
 Autocomplete for "i have an app idea" puts "where do i start" first and
 "what next" / "what do i do" lower. Autocomplete gives order, not counts, so
 one page answering both is safer than betting on the second phrase.
+
+## 2026-10-19 — a demo has to be something people pay for
+The boss turned down Draw Names: "that's not an app anyone would pay for".
+Same rule as for ideas: a demo shows what a client would buy, so it needs a
+paid action people already spend money on, not only a search. Autocomplete
+today: "custom pet portraits" with "…etsy", "…from photos", "…funny" (people
+buy these); "turn photo into coloring page" mostly ends in "free". Comic
+Cover's $9 superhero drawing of your pet is already a custom pet portrait.
