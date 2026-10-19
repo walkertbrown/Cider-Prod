@@ -257,3 +257,11 @@ The boss pasted a message from the docent. In it:
   or Comic Cover, the record does not carry that and it will not go out."
 - The house TikTok is the one Buffer shows as "sizecurve"; the house YouTube is
   "Bananafest Destiny".
+
+## 2026-10-18 — a half-built app is fine
+I asked: "Can a client bring a half-built app like Chronicles for the $50, or
+does the bot only build new ones?" The boss: "Yeah, I don't care. If someone
+wanted to do that, we would do it"
+(Before that, about Chronicles: "I haven't worked on it in a long time, I
+wouldn't mind giving it away to you". I said I would not take it on as a
+second product; nothing was handed over.)

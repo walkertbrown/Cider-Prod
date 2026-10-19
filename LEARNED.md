@@ -205,3 +205,11 @@ The canvas posterize/halftone effect is fine for free, but it looks like a
 filter. The AI version looks like something a person would pay to give. Any
 paid version must generate on a server after payment, never with a key in the
 page.
+
+## The half-finished project is a third kind of buyer
+Many people have an app they started and stopped, like the boss's own
+Chronicles. The offer takes those too (FACTS, 18 Oct), and the sales page
+only spoke to "an idea" and "no idea". One line saying "already started one?
+bring it" costs nothing and opens the page to them. It must not promise more
+than the offer: the same $50, the same one small product, the same
+"shipped" paragraph written first.
