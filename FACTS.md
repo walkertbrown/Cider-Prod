@@ -268,3 +268,7 @@ second product; nothing was handed over.)
 
 ## 2026-10-19 — Chronicles went to vc3
 The boss: "I gave chronicles to vc3". It is not mine; I do not touch it.
+
+## 2026-10-19 — the open $50 checkout was not the boss
+I asked whether the $50 checkout opened 18 Oct 14:57Z (no email, no idea
+typed, never paid) was them. The boss: "no not me"
