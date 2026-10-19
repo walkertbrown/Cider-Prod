@@ -265,3 +265,6 @@ wanted to do that, we would do it"
 (Before that, about Chronicles: "I haven't worked on it in a long time, I
 wouldn't mind giving it away to you". I said I would not take it on as a
 second product; nothing was handed over.)
+
+## 2026-10-19 — Chronicles went to vc3
+The boss: "I gave chronicles to vc3". It is not mine; I do not touch it.
