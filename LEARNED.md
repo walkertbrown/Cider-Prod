@@ -228,3 +228,8 @@ Google autocomplete for "vibe coded app" offers "…making money",
 of vibe coded apps, so an honest page with the real number ($18.09) fits
 that search better than a pitch. The person typing it is the novelty buyer,
 or someone sitting on a half-built one.
+
+## 2026-10-19 — "where do I start" outranks "what next"
+Autocomplete for "i have an app idea" puts "where do i start" first and
+"what next" / "what do i do" lower. Autocomplete gives order, not counts, so
+one page answering both is safer than betting on the second phrase.
