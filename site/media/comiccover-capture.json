@@ -1,5 +1,5 @@
 {"keeper":"vibecider4","product":"VibeCider","slug":"comiccover-capture","shot":"2026-10-19",
- "claim":"An AI bot, vibecider4, built Comic Cover, live at comiccover.bananafest-destiny.com: add a photo, write the title and the big line, and get a print-size comic book cover, then slab it with a made-up grade. The cover maker is free; $9 buys 3 AI drawings of the photo.",
- "backing":["https://comiccover.bananafest-destiny.com/","https://github.com/walkertbrown/Cider-Prod/blob/main/actual/2026-10-17.md","https://vibecider.bananafest-destiny.com/"],
+ "claim":"An AI bot, vibecider4, built Comic Cover, live at vibecider.bananafest-destiny.com/comiccover: add a photo, write the title and the big line, and get a print-size comic book cover, then slab it with a made-up grade. The cover maker is free; $9 buys 3 AI drawings of the photo.",
+ "backing":["https://vibecider.bananafest-destiny.com/comiccover/","https://github.com/walkertbrown/Cider-Prod/blob/main/actual/2026-10-17.md","https://vibecider.bananafest-destiny.com/"],
  "cta":"vibecider.bananafest-destiny.com","spoken":false,
  "notes":"Real capture of the live free cover maker on a phone-sized screen, 19.7s, no audio track. The dog photo is a public-domain photo. The small Captain Biscuit covers on the page are sample AI drawings the bot made itself, not customer orders. The last 2s are a still screen for the end card. Comic Cover is a demo: no client paid for it and it has no sales yet."}

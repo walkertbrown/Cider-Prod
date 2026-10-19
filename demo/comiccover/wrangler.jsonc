@@ -1,10 +1,12 @@
 // Committed template. The real KV id lives in wrangler.local.jsonc (gitignored):
 // deploy with `npx wrangler@4 deploy -c wrangler.local.jsonc`.
+// The app lives at vibecider.bananafest-destiny.com/comiccover/ (the sales site
+// hands that path to this Worker). The old hostname stays, as 301s.
 {
   "name": "comiccover-demo",
   "main": "src/worker.js",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
   "kv_namespaces": [{ "binding": "COVERS", "id": "<kv-id>" }],
   "vars": { "PAYMENT_LINK": "plink_1URWb4Ro6ix1hE5veJB0U832" },
   "routes": [{ "pattern": "comiccover.bananafest-destiny.com", "custom_domain": true }]

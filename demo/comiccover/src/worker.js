@@ -1,13 +1,18 @@
 // Comic Cover: the free cover maker is static (public/). This Worker adds the
 // paid part: $9 buys 3 AI drawings, checked against Stripe on every call.
-//   GET  /paid?session_id=…        the same page, in paid mode
-//   GET  /api/order?session_id=…   { left, drawings: [{ n, mime }] }
-//   POST /api/draw                 { session_id, photo (base64 jpeg), color, power }
-//   GET  /api/img/<session>/<n>    the drawing, as base64 text (x-mime header)
+// It lives at vibecider.bananafest-destiny.com/comiccover/ (the sales site
+// passes that path here); comiccover.bananafest-destiny.com 301s to it, which
+// keeps the Payment Link's return URL and the published links working.
+//   GET  /comiccover/paid?session_id=…        the same page, in paid mode
+//   GET  /comiccover/api/order?session_id=…   { left, drawings: [{ n, mime }] }
+//   POST /comiccover/api/draw                 { session_id, photo (base64 jpeg), color, power }
+//   GET  /comiccover/api/img/<session>/<n>    the drawing, as base64 text (x-mime header)
 // The photo is passed straight to the image API and never stored. Drawings are
 // kept in KV for 30 days. Base64 is never decoded here except for the OpenAI
 // fallback, to stay well inside the Worker CPU limit.
 
+const HOME = "vibecider.bananafest-destiny.com";
+const BASE = "/comiccover";
 const TRIES = 3;
 const TTL = 30 * 24 * 3600;
 const SID = /^cs_(live|test)_[A-Za-z0-9]{10,200}$/;
@@ -138,10 +143,15 @@ async function draw(req, env) {
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    const p = url.pathname;
+    if (url.hostname !== HOME) {
+      return Response.redirect(`https://${HOME}${BASE}${url.pathname}${url.search}`, 301);
+    }
+    if (url.pathname === BASE) return Response.redirect(`https://${HOME}${BASE}/${url.search}`, 301);
+    if (!url.pathname.startsWith(BASE + "/")) return new Response("Not found", { status: 404 });
+    const p = url.pathname.slice(BASE.length);
 
     if (p === "/paid" && req.method === "GET") {
-      const r = await env.ASSETS.fetch(new Request(new URL("/", url), req));
+      const r = await env.ASSETS.fetch(new Request(new URL(BASE + "/", url), req));
       const h = new Headers(r.headers);
       h.set("x-robots-tag", "noindex");
       h.set("cache-control", "no-store");

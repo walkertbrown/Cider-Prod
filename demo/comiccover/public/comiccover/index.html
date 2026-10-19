@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Custom comic book cover maker: put your photo on a comic cover | Comic Cover</title>
 <meta name="description" content="Free custom comic book cover maker. Add a photo, type the title, issue number and the big line, and download a print-size personalized comic book cover. A gift in two minutes. No sign-up; your photo never leaves your device.">
-<link rel="canonical" href="https://comiccover.bananafest-destiny.com/">
+<link rel="canonical" href="https://vibecider.bananafest-destiny.com/comiccover/">
 <link rel="icon" href="/logo.svg" type="image/svg+xml">
 <meta property="og:title" content="Custom comic book cover maker">
 <meta property="og:description" content="Put anyone on the cover of their own comic. Free, print-size, no sign-up.">
@@ -144,7 +144,7 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-si
 </div>
 
 <section class="buy" id="buy">
-  <img src="/examples/captain-biscuit.jpg" width="640" height="990" alt="Example: a golden retriever drawn by the AI as a superhero on a comic cover titled Captain Biscuit" loading="lazy">
+  <img src="/comiccover/examples/captain-biscuit.jpg" width="640" height="990" alt="Example: a golden retriever drawn by the AI as a superhero on a comic cover titled Captain Biscuit" loading="lazy">
   <div>
     <h2>Have it drawn for real: $9</h2>
     <p>The free version puts a filter on your photo. This one has an AI artist redraw it as a comic book hero: costume, cape, heroic pose, a city behind them, inked and coloured like a real 1960s cover, and still looking like them.</p>
@@ -164,7 +164,7 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-si
 </ul>
 <p>The heroes are yours. Use original names; Marvel and DC logos and characters belong to them.</p>
 
-<p class="demo">This app was built by an AI bot as a demo of what a <a href="https://vibecider.bananafest-destiny.com/">VibeCider bot</a> makes: one small web app, one job, live on its own domain. The bot built the paid version too: payment check, three tries per order, a backup artist if the first fails. Have an idea of your own? A bot builds it and markets it for $50 until it makes its first dollar, up to 90 days.</p>
+<p class="demo">This app was built by an AI bot as a demo of what a <a href="https://vibecider.bananafest-destiny.com/">VibeCider bot</a> makes: one small web app, one job, live on the web (a client's goes on a domain they own). The bot built the paid version too: payment check, three tries per order, a backup artist if the first fails. Have an idea of your own? A bot builds it and markets it for $50 until it makes its first dollar, up to 90 days.</p>
 
 <footer>
   Built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>. Its log is public at
@@ -315,8 +315,9 @@ function draw() {
   ctx.fillStyle = "#fff"; ctx.fillRect(40, H - 190, 330, 150); ctx.strokeStyle = "#111"; ctx.lineWidth = 5; ctx.strokeRect(40, H - 190, 330, 150);
   ctx.fillStyle = "#111"; let x = 62; const seed = (title + small).split("").reduce((s, ch) => s * 31 + ch.charCodeAt(0) >>> 0, 7);
   for (let i = 0; x < 348; i++) { const bw = 2 + ((seed >> (i % 28)) & 3) * 2; if (i % 2 === 0) ctx.fillRect(x, H - 172, bw, 82); x += bw + 2; }
-  ctx.font = `600 17px system-ui, sans-serif`; ctx.textAlign = "center";
-  ctx.fillText("comiccover.bananafest-destiny.com", 205, H - 60);
+  ctx.font = `600 16px system-ui, sans-serif`; ctx.textAlign = "center";
+  ctx.fillText("vibecider.bananafest-destiny.com", 205, H - 68, 310);
+  ctx.fillText("/comiccover", 205, H - 49);
   if (slabOn()) drawSlab();
 }
 
@@ -417,7 +418,7 @@ function useDrawing(n) {
 }
 async function addDrawing(n) {
   if (drawings[n]) return;
-  const r = await fetch(`/api/img/${sid}/${n}`); if (!r.ok) return;
+  const r = await fetch(`/comiccover/api/img/${sid}/${n}`); if (!r.ok) return;
   const src = `data:${r.headers.get("x-mime") || "image/png"};base64,` + await r.text();
   const im = new Image(); await new Promise(ok => { im.onload = ok; im.src = src; });
   drawings[n] = im;
@@ -440,7 +441,7 @@ function shrink(im) {
 if (sid) {
   $("paid").style.display = "block"; $("buy").style.display = "none";
   document.querySelector("label[for=photo] .hint").textContent = "A face or a whole person, well lit. Sent to the AI artist when you press Draw.";
-  fetch(`/api/order?session_id=${encodeURIComponent(sid)}`).then(r => r.json()).then(async o => {
+  fetch(`/comiccover/api/order?session_id=${encodeURIComponent(sid)}`).then(r => r.json()).then(async o => {
     if (o.error) { $("pmsg").textContent = o.error; return; }
     showLeft(o.left);
     for (const d of o.drawings.sort((a, b) => a.n - b.n)) await addDrawing(d.n);
@@ -449,7 +450,7 @@ if (sid) {
     if (!photo) { $("status").textContent = "Add a photo in the form below first."; $("photo").focus(); return; }
     $("go").disabled = true; $("status").textContent = "Drawing… this takes 10 to 60 seconds. Keep this page open.";
     try {
-      const r = await fetch("/api/draw", { method: "POST", headers: { "content-type": "application/json" },
+      const r = await fetch("/comiccover/api/draw", { method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ session_id: sid, photo: shrink(photo), color: pick("c"), power: val("power") }) });
       const o = await r.json();
       if (o.left !== undefined) showLeft(o.left);

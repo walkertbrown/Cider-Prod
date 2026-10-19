@@ -1,6 +1,8 @@
 {
   "name": "vibecider-sales",
+  "main": "worker/sales.js",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "./site" },
+  "assets": { "directory": "./site", "binding": "ASSETS" },
+  "services": [{ "binding": "COMICCOVER", "service": "comiccover-demo" }],
   "routes": [{ "pattern": "vibecider.bananafest-destiny.com", "custom_domain": true }]
 }
