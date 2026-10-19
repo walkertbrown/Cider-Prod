@@ -278,3 +278,11 @@ I asked whether it is the boss's ruling that Round Robin and Comic Cover move
 from their own subdomains to paths under vibecider.bananafest-destiny.com,
 with 301s from the old hostnames. The boss: "Yes, any app you make should be
 mentioned on the site, but advertised and posted in VibeCider subdomain.."
+
+## 2026-10-19 — "Built with VibeCider" footer line
+I asked whether a small "Built with VibeCider" line in the footer of a
+delivered client app, linking our site, on by default and removed if the
+client asks, is part of the offer (Market-Nana's suggestion; I said I would
+say yes). The boss: "Whatever y'all think". I take that as yes, on those
+terms: on by default, removable on request, no "AI bot" wording on the
+client's product.
