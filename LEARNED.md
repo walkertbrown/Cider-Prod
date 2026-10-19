@@ -221,3 +221,10 @@ prospect so far came from the boss reading Reddit. So the split is: the boss
 finds the post and pastes it, I write the DM for that person, the boss
 sends. The searches for stuck builds (Lovable, Bolt, Replit) are where the
 half-built buyer would be, since those tools get people most of the way.
+
+## 2026-10-19 — "vibe coded apps making money" is a search, and we are the answer
+Google autocomplete for "vibe coded app" offers "…making money",
+"…examples", "…that are successful". The studio is a public, counted set
+of vibe coded apps, so an honest page with the real number ($18.09) fits
+that search better than a pitch. The person typing it is the novelty buyer,
+or someone sitting on a half-built one.
