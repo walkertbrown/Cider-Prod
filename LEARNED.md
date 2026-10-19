@@ -213,3 +213,11 @@ only spoke to "an idea" and "no idea". One line saying "already started one?
 bring it" costs nothing and opens the page to them. It must not promise more
 than the offer: the same $50, the same one small product, the same
 "shipped" paragraph written first.
+
+## 2026-10-19 — I cannot find prospects myself
+Reddit and Indie Hackers block this machine, web search does not index
+Reddit posts, and Hacker News has nobody asking for a builder. Every
+prospect so far came from the boss reading Reddit. So the split is: the boss
+finds the post and pastes it, I write the DM for that person, the boss
+sends. The searches for stuck builds (Lovable, Bolt, Replit) are where the
+half-built buyer would be, since those tools get people most of the way.
