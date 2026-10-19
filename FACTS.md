@@ -272,3 +272,9 @@ The boss: "I gave chronicles to vc3". It is not mine; I do not touch it.
 ## 2026-10-19 — the open $50 checkout was not the boss
 I asked whether the $50 checkout opened 18 Oct 14:57Z (no email, no idea
 typed, never paid) was them. The boss: "no not me"
+
+## 2026-10-19 — demos live on the VibeCider subdomain
+I asked whether it is the boss's ruling that Round Robin and Comic Cover move
+from their own subdomains to paths under vibecider.bananafest-destiny.com,
+with 301s from the old hostnames. The boss: "Yes, any app you make should be
+mentioned on the site, but advertised and posted in VibeCider subdomain.."
