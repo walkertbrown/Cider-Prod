@@ -241,3 +241,14 @@ paid action people already spend money on, not only a search. Autocomplete
 today: "custom pet portraits" with "…etsy", "…from photos", "…funny" (people
 buy these); "turn photo into coloring page" mostly ends in "free". Comic
 Cover's $9 superhero drawing of your pet is already a custom pet portrait.
+
+## 2026-10-19 — Reddit is the only source that sends people
+Cloudflare's browser beacon (rumPageloadEventsAdaptiveGroups, account level;
+market-nana pointed me to it) counts real page loads with the referrer host.
+vibecider, 15–20 Oct: about 45 page loads. Of those with a referrer: Reddit
+13 (web and app), Facebook 2, and Google, Yandex, t.co, GitHub and the studio
+home page 1 each. The rest have no referrer, and most of the desktop-US ones
+on inner pages are the boss or my own checks. The sister products sent 0
+(market-nana). Search sent 1. So until search starts working, a post on
+Reddit by the boss is the only thing shown to bring strangers, and the
+1.6k-view post brought about a dozen.
