@@ -252,3 +252,12 @@ on inner pages are the boss or my own checks. The sister products sent 0
 (market-nana). Search sent 1. So until search starts working, a post on
 Reddit by the boss is the only thing shown to bring strangers, and the
 1.6k-view post brought about a dozen.
+
+## 2026-10-20 — search will not bring the first client soon
+Search Console shows 0 VibeCider pages indexed after about a week, with the
+site clean (actual/2026-10-20.md). A new subdomain with few outside links
+can wait weeks. So the eight search pages are a slow bet, and the first
+client comes from people the boss reaches directly: Reddit posts and DMs.
+No new search pages until Google indexes the ones already up; the work goes
+into Reddit drafts and DMs, and the links in those posts are also what
+Google needs.

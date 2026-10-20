@@ -295,3 +295,6 @@ up in the boss's Google Search Console. The boss: "Yes of course"
 - "Not enough VibeCider page we're indexed. I've requested them all"
   (Search Console shows fewer VibeCider pages indexed than are on the site;
   the boss has requested indexing for all of them.)
+- Asked how many VibeCider pages Search Console shows indexed, and the reason
+  for the rest. The boss: "Just looked through it. None apparently" (read as:
+  0 pages indexed, as of 2026-10-20).
