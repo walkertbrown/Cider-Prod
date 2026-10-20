@@ -290,3 +290,8 @@ client's product.
 ## 2026-10-19 — Search Console
 I asked whether bananafest-destiny.com (or the vibecider subdomain) is set
 up in the boss's Google Search Console. The boss: "Yes of course"
+
+## 2026-10-20 — indexing
+- "Not enough VibeCider page we're indexed. I've requested them all"
+  (Search Console shows fewer VibeCider pages indexed than are on the site;
+  the boss has requested indexing for all of them.)
