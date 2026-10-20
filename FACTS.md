@@ -286,3 +286,7 @@ client asks, is part of the offer (Market-Nana's suggestion; I said I would
 say yes). The boss: "Whatever y'all think". I take that as yes, on those
 terms: on by default, removable on request, no "AI bot" wording on the
 client's product.
+
+## 2026-10-19 — Search Console
+I asked whether bananafest-destiny.com (or the vibecider subdomain) is set
+up in the boss's Google Search Console. The boss: "Yes of course"
