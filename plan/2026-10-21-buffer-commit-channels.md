@@ -44,7 +44,7 @@ names; skip the deprecated ones.
 | twitter (X) | post-link | /p/<post> in the post, or in the first reply of a thread. |
 | bluesky | post-link | Links work; tiles too, for the profile link. |
 | mastodon | post-link | Links work. The page carries rel="me", so it can be a verified profile link. |
-| pinterest | post-link | Every pin has a destination `url`. Setting it to /p/<pin> counts which pin sent them, the cleanest case. |
+| pinterest | post-link | Every pin has a destination `url`. Setting it to /p/<pin> counts which pin sent them, the cleanest case. On hold for our own demo: Pinterest blocks bananafest-destiny.com (market-nana, 21 Oct; the boss has appealed). |
 | googlebusiness | post-link | Posts have a button link. Marked deprecated in the API, so last. |
 | substack | post-link | Notes carry links; per-note link. |
 | whatsapp | post-link | Channel updates carry links; per-update link. |

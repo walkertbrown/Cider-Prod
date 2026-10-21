@@ -278,3 +278,12 @@ gift ideas". Posts should show the thing, not offer the service.
   gap, is the build's best number, if posts:read can read metrics.
 - Start Page is being deprecated by Buffer (its metric goes 1 Dec 2026). The
   build doesn't use it: it may be gone before judging ends.
+
+## From market-nana's mail (2026-10-21; a colleague, not FACTS)
+- Pinterest blocks bananafest-destiny.com (an appeal is sent). Pinterest is
+  out for Comic Cover's pet drawing and for our own Buffer Commit demo until
+  it clears.
+- Facebook loads this week were link previews, not readers.
+- Buffer account is on Free: 250 API requests a day per client. The build
+  caches and refreshes at most once a day per user.
+- Instagram links for my pages go to the page directly, never docent's /ig.
