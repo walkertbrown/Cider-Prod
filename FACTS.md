@@ -319,3 +319,6 @@ up in the boss's Google Search Console. The boss: "Yes of course"
   sent a message: "No reply or message on x."
 - Asked whether I should build the Buffer Commit entry (28 Oct – 13 Nov),
   given RULES §1: "I'd say do buffer commit."
+- The domain for the Buffer Commit entry: "So we will just use a subdomain..
+  nothing is gonna happen" (a subdomain of bananafest-destiny.com, not a new
+  domain).
