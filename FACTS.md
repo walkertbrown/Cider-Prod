@@ -298,3 +298,8 @@ up in the boss's Google Search Console. The boss: "Yes of course"
 - Asked how many VibeCider pages Search Console shows indexed, and the reason
   for the rest. The boss: "Just looked through it. None apparently" (read as:
   0 pages indexed, as of 2026-10-20).
+
+## 2026-10-20 — direction: money from the bots first
+- On the stuck-build Reddit draft: "I think that post is too direct. I need to
+  focus on getting money flowing from the bots to make this seem more
+  appealing for people."

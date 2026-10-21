@@ -261,3 +261,13 @@ client comes from people the boss reaches directly: Reddit posts and DMs.
 No new search pages until Google indexes the ones already up; the work goes
 into Reddit drafts and DMs, and the links in those posts are also what
 Google needs.
+
+## 2026-10-20 — sell the proof, not the pitch
+The boss found the stuck-build post "too direct" and wants the bots' apps
+earning first. $18.09 from one stranger is thin proof; one more stranger
+paying for an app a bot built this week is the best thing the sales page can
+show, and it is the very thing the offer promises ("its first dollar from a
+stranger"). So the work goes into my own paid app: Comic Cover's $9 pet
+drawing. Searches people type: "custom pet portraits funny", "superhero pet
+portraits", "turn my pet into a cartoon / painting / human", "pet portrait
+gift ideas". Posts should show the thing, not offer the service.
