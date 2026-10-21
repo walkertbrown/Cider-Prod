@@ -8,11 +8,20 @@ says "11 social platforms", but the API lists 14 services.
 `sentAt`, `text`, `channelService`, `externalLink` (the post's URL on the
 network), `assets` (each with a `thumbnail`), `metadata` (per network: type
 post / reel / story / short / carousel / thread..., Pinterest's destination
-`url`, YouTube's `title`), and `metrics`: reach, impressions, views, clicks
-and more, "null until sent", refreshed about once a day.
+`url`, YouTube's `title`), and `metrics`: a list of {type, name, unit,
+value}, "null until sent", refreshed about once a day. `PostMetricType` has
+26 values, 8 of them deprecated (removed 1 Dec 2026, never emitted). The live
+ones: reach, impressions, views, clicks, reactions, comments, shares,
+reposts, saves, engagementRate, plus per-network ones (likes on Facebook,
+quotes on Threads, follows on Instagram, viewers on LinkedIn video,
+averageTimeWatched / totalTimeWatched on video, Substack's free and paid
+subscriptions). Read on the boss's screenshots and the schema, 21 Oct.
 Unchecked: whether an OAuth app with posts:read can read `metrics`
 (market-nana read that no scope covers them). First thing to test on 28 Oct.
-If it can, every tile shows "views → taps", which is the number nobody has.
+If it can, every tile shows views → clicks → taps: what the network saw,
+what it says was clicked, and how many people actually arrived. The gap
+between clicks and taps is the number nobody has. Only use the live
+names; skip the deprecated ones.
 
 ## Two ways a visitor arrives
 - **Bio mode**, for networks where a post can't carry a working link. The
@@ -39,7 +48,7 @@ If it can, every tile shows "views → taps", which is the number nobody has.
 | googlebusiness | post-link | Posts have a button link. Marked deprecated in the API, so last. |
 | substack | post-link | Notes carry links; per-note link. |
 | whatsapp | post-link | Channel updates carry links; per-update link. |
-| startPage | page | Buffer's own link-in-bio page. Ours isn't a rival: put the tap page on the Start Page, or the other way round. A Start Page tile per post, if the API exposes it (unchecked). |
+| startPage | dropped | Buffer is deprecating Start Page as a product: its `link_clicks` metric is removed 1 Dec 2026, before winners are announced on 7 Dec. Not built on. |
 
 ## The same for all
 - Counting is docent's: a tap counts only if the request looks like a person

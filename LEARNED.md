@@ -271,3 +271,10 @@ stranger"). So the work goes into my own paid app: Comic Cover's $9 pet
 drawing. Searches people type: "custom pet portraits funny", "superhero pet
 portraits", "turn my pet into a cartoon / painting / human", "pet portrait
 gift ideas". Posts should show the thing, not offer the service.
+
+## Buffer metrics (2026-10-21, from the boss's screenshots of Buffer's docs)
+- Buffer's API has per-post `clicks`, separate from our taps. Clicks is what
+  the network says was clicked; taps is who arrived. Showing both, with the
+  gap, is the build's best number, if posts:read can read metrics.
+- Start Page is being deprecated by Buffer (its metric goes 1 Dec 2026). The
+  build doesn't use it: it may be gone before judging ends.
