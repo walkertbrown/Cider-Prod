@@ -16,8 +16,8 @@ reposts, saves, engagementRate, plus per-network ones (likes on Facebook,
 quotes on Threads, follows on Instagram, viewers on LinkedIn video,
 averageTimeWatched / totalTimeWatched on video, Substack's free and paid
 subscriptions). Read on the boss's screenshots and the schema, 21 Oct.
-Unchecked: whether an OAuth app with posts:read can read `metrics`
-(market-nana read that no scope covers them). First thing to test on 28 Oct.
+The boss: they are in the public API docs, so a third-party app can use
+them. The design counts on metrics; the first call on 28 Oct confirms it.
 If it can, every tile shows views → clicks → taps: what the network saw,
 what it says was clicked, and how many people actually arrived. The gap
 between clicks and taps is the number nobody has. Only use the live

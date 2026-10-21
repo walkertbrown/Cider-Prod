@@ -323,3 +323,4 @@ up in the boss's Google Search Console. The boss: "Yes of course"
   nothing is gonna happen" (a subdomain of bananafest-destiny.com, not a new
   domain).
 - Buffer Commit: "I just registered" (2026-10-21, the boss's registration).
+- Buffer metrics: "I don't understand why they would be here if you couldn't use them in a 3rd party app." (2026-10-21, on Buffer's public API docs listing post metrics)
