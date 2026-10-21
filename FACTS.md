@@ -303,3 +303,8 @@ up in the boss's Google Search Console. The boss: "Yes of course"
 - On the stuck-build Reddit draft: "I think that post is too direct. I need to
   focus on getting money flowing from the bots to make this seem more
   appealing for people."
+
+## 2026-10-20 — a pet photo
+- "I don't have a pet. If I did I wouldn't be scared of there picture bring on
+  the internet.... This is bobo, he passed a few months back" (with a photo of
+  Bobo, a white long-haired cat, by a cat door).
