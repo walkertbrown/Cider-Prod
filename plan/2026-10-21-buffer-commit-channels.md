@@ -93,3 +93,17 @@ not in the scope list (posts, ideas, account, snippets); checked 28 Oct.
 
 Our own use during the window: Comic Cover's $9 pet drawing. Its posts, its
 taps and any sale are the demo video and the Build-in-Public posts.
+
+## Money in Buffer's API (schema read 21 Oct)
+No sales, revenue or orders anywhere; Buffer never sees a purchase. The
+nearest things:
+- `paidSubscriptions` / `freeSubscriptions`: paid and free Substack
+  subscriptions attributed to one Note (experimental). This is the only real
+  money count, and only on Substack. It goes in the sales column as is.
+- Google Business `offer` posts carry a coupon `code`, `link`, `terms` and
+  dates. A code per post shows up on the sale, even with no link tapped.
+- Instagram `metadata.link` is the post's Shop Grid link: a per-post link on
+  Instagram, if Shop Grid outlives Start Page (unchecked).
+- `clicks`: the closest thing for every network.
+So sales come from the user's Stripe (the post ID passed into the Payment
+Link), plus Substack's own count.
