@@ -65,3 +65,31 @@ names; skip the deprecated ones.
 - On tap.bananafest-destiny.com (the boss: a subdomain).
 - Build-in-public: the contest has a Build-in-Public Award. Our plan/actual
   log is public already.
+
+## Additions (the boss, 21 Oct): both, and the winner becomes a template
+Read from the schema on api.buffer.com, 21 Oct: `createPostTemplate` (body
+with `{{placeholders}}`, title, description, emoji; visibility private or
+internal, never public), `createTag`, `createPost` with `tagIds` and
+`saveToDraft`, `createIdea`. Which OAuth scope covers templates and tags is
+not in the scope list (posts, ideas, account, snippets); checked 28 Oct.
+
+1. **Keep what worked.** On a winning post the page offers "Keep this". It:
+   - saves a Buffer post template. The body is the post's text with the
+     specifics turned into placeholders: `{{link}}`, `{{thing}}`. The title
+     carries the result, for example "Pinterest, 41 taps, 30 Oct". It then
+     shows in Buffer's own composer next to the user's other templates.
+   - makes a Buffer tag of the same name.
+2. **Post it again.** From a kept template, one tap makes Buffer drafts
+   (`saveToDraft`, never sent by us) for the networks it hasn't run on, each
+   with that tag. The user checks and sends them in Buffer.
+3. **Matching.** Every post with a template's tag counts toward that
+   template. Whether it was posted from the button or by hand in Buffer, the
+   page shows each template's record: posts, taps, sales, best network.
+   Templates that stop working sink, and new winners rise.
+4. **Sales.** For links to a Stripe Payment Link, the tap page adds
+   `client_reference_id=<post>`. With a read-only Stripe key, each paid
+   checkout counts back to its post and its template. Each post then reads
+   views → clicks → taps → sales.
+
+Our own use during the window: Comic Cover's $9 pet drawing. Its posts, its
+taps and any sale are the demo video and the Build-in-Public posts.
