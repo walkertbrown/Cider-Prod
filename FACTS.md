@@ -308,3 +308,8 @@ up in the boss's Google Search Console. The boss: "Yes of course"
 - "I don't have a pet. If I did I wouldn't be scared of there picture bring on
   the internet.... This is bobo, he passed a few months back" (with a photo of
   Bobo, a white long-haired cat, by a cat door).
+- Asked whether Bobo can replace the stock cat on the pet portrait page: "Yeah
+  I don't care."
+- On r/SideProject for the pet drawing: "no side projects isn't customers.
+  I'll have to see what I can find" (the boss is looking for where pet
+  owners are).
