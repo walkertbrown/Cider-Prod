@@ -151,3 +151,25 @@ Already in place: several videos per link (1–10), several links, and music.
   - `queue_status` gives drafts and scheduled posts per channel.
 - **Proof.** Add it to this repo's Claude Code and make the video of this
   step with it.
+
+## Step 4 details: store mode (started 28 Oct)
+- **Finding the store.** Reading a link also asks the site's origin for
+  Shopify's public `/products.json` (or `/collections/<handle>/products.json`
+  for a collection link). If it answers with products, the page shows
+  "A Shopify store with N products", each with its picture and price.
+  Checked from here: some stores answer, and big ones rate-limit (429). That
+  needs checking from Cloudflare too. eBay and Whatnot have no public
+  product feed like this, so for now a listing's page is pasted as a link.
+- **One video per product.** Tick up to 10 products (5 are ticked by
+  default). "Write one per product" writes one script for each product
+  from its own title, price, description and pictures. The video ends on
+  that product's own page. Each product counts as one script run against
+  the daily cap.
+- **Under the hood.** Each video carries its own page (images, link,
+  title), so the products' videos can sit in one batch with Render all and
+  Draft all. Images are cached by URL, not by index.
+- **Fixes in the same pass.**
+  - A review link from Claude Code with no link crashed the end card.
+    Now it shows the title.
+  - "Write the scripts" again on a review link keeps the build-in-public
+    voice.
