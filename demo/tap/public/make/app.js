@@ -4,6 +4,8 @@ import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer
 const W = 1080, H = 1920, FPS = 30, END = 2.5;
 const $ = id => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+// Each video can carry its own page (a store product); otherwise it uses the page that was read.
+const pg = v => v.page || page;
 const img = u => u.startsWith(location.origin + "/i/") ? u : `/api/img?u=${encodeURIComponent(u)}`;
 
 call.raw = async (path, body) => {
@@ -23,7 +25,7 @@ async function call(path, body, method = "POST") {
 let page = null, channels = null;
 
 $("readForm").onsubmit = async e => {
-  e.preventDefault();
+  e.preventDefault(); $("storeBox").hidden = true;
   $("readBtn").disabled = true; $("readStatus").textContent = "Reading…"; $("readStatus").className = "status small"; $("pageBox").hidden = true;
   try {
     page = await call("/api/read", { urls: $("url").value.split(/\s+/).filter(Boolean) });
@@ -35,6 +37,7 @@ $("readForm").onsubmit = async e => {
     $("count").replaceChildren(...Array.from({ length: 10 }, (_, i) => el("option", { value: i + 1, textContent: i + 1, selected: i + 1 === page.suggested })));
     $("pWhy").textContent = `Suggested: ${page.suggested}. ${page.pages.length > 1 ? `The ${page.pages.length} pages have` : "The page has"} ${page.why}. More than that gets you different angles on the same material.`;
     $("pageBox").hidden = false; $("readStatus").textContent = "";
+    showStore(page.store);
   } catch (err) { $("readStatus").textContent = err.message; $("readStatus").className = "status small bad"; }
   $("readBtn").disabled = false;
 };
@@ -51,16 +54,56 @@ $("writeBtn").onclick = async () => {
   $("writeBtn").disabled = false;
 };
 
+// ---- Store mode: a Shopify store's products, one video each ----------------
+
+const money = (store, p) => p.price ? `${p.price}${store.currency ? " " + store.currency : ""}` : "";
+function showStore(store) {
+  $("storeBox").hidden = !store;
+  if (!store) return;
+  $("sTitle").textContent = `${store.name}: a Shopify store${store.collection ? ` (collection “${store.collection}”)` : ""} with ${store.products.length}${store.products.length === 50 ? "+" : ""} products`;
+  $("sList").replaceChildren(...store.products.map((p, i) => el("label", { className: "prod" },
+    el("input", { type: "checkbox", value: i, checked: i < 5, onchange: storeCount }),
+    p.images[0] ? el("img", { src: img(p.images[0]), alt: "", loading: "lazy" }) : el("span"),
+    el("span", {}, p.title, el("span", { className: "small muted", textContent: [money(store, p), p.type].filter(Boolean).map(x => " · " + x).join("") })))));
+  storeCount();
+}
+function storeCount() {
+  const n = $("sList").querySelectorAll("input:checked").length;
+  $("storeBtn").textContent = `Write ${n} video${n === 1 ? "" : "s"}, one per product`;
+  $("storeBtn").disabled = !n || n > 10;
+  $("sNote").textContent = n > 10 ? "Up to 10 at a time." : "Each product gets its own video, from its own pictures and description, ending on its own page. Each one counts as a script run.";
+}
+$("storeBtn").onclick = async () => {
+  const store = page.store, picked = [...$("sList").querySelectorAll("input:checked")].map(c => store.products[+c.value]);
+  $("storeBtn").disabled = true; $("storeStatus").className = "status small";
+  cards.length = 0; $("videos").replaceChildren(); $("allTicks").replaceChildren(); $("allOut").replaceChildren();
+  const failed = [];
+  for (const [i, p] of picked.entries()) {
+    $("storeStatus").textContent = `Writing ${i + 1} of ${picked.length}: ${p.title}…`;
+    const one = { url: p.url, host: new URL(p.url).hostname, title: p.title, description: [money(store, p), p.was && +p.was > +p.price ? `was ${p.was}` : "", p.type].filter(Boolean).join(" · "),
+      text: `Store: ${store.name}\nProduct: ${p.title}\nPrice: ${money(store, p)}${p.was && +p.was > +p.price ? ` (was ${p.was})` : ""}\nType: ${p.type}\nBy: ${p.vendor}\n\n${p.text}`,
+      images: p.images, products: [], pages: [] };
+    try {
+      const out = await call("/api/scripts", { page: one, count: 1 });
+      for (const v of out.videos) { v.page = one; $("videos").append(videoCard(v, cards.length)); }
+      allBox();
+    } catch (err) { failed.push(`${p.title}: ${err.message}`); if (/cap|limit|today/i.test(err.message)) break; }
+  }
+  $("storeStatus").textContent = failed.join(" ");
+  $("storeStatus").className = failed.length ? "status small bad" : "status small";
+  storeCount();
+};
+
 // ---- One video's card: editable script, render, preview, draft --------------
 
 function videoCard(v, n) {
   const scenes = el("div");
   const sceneRow = s => {
-    const thumb = s.image == null ? el("div", { className: "noimg" }) : el("img", { src: img(page.images[s.image]), alt: "" });
+    const thumb = s.image == null ? el("div", { className: "noimg" }) : el("img", { src: img(pg(v).images[s.image]), alt: "" });
     const text = el("textarea", { value: s.text, rows: 2, oninput() { s.text = this.value; } });
     const pick = el("select", { title: "Image", onchange() { s.image = this.value === "" ? null : +this.value;
-      const t = s.image == null ? el("div", { className: "noimg" }) : el("img", { src: img(page.images[s.image]), alt: "" }); row.firstChild.replaceWith(t); } },
-      el("option", { value: "", textContent: "none" }), ...page.images.map((_, i) => el("option", { value: i, textContent: `image ${i + 1}`, selected: s.image === i })));
+      const t = s.image == null ? el("div", { className: "noimg" }) : el("img", { src: img(pg(v).images[s.image]), alt: "" }); row.firstChild.replaceWith(t); } },
+      el("option", { value: "", textContent: "none" }), ...pg(v).images.map((_, i) => el("option", { value: i, textContent: `image ${i + 1}`, selected: s.image === i })));
     const row = el("div", { className: "scene" }, thumb, text, pick);
     return row;
   };
@@ -277,10 +320,10 @@ $("draftAll").onclick = async () => {
 // ---- Rendering -------------------------------------------------------------
 
 const bitmaps = new Map();
-async function bitmap(i) {
-  if (i == null) return null;
-  if (!bitmaps.has(i)) bitmaps.set(i, fetch(img(page.images[i])).then(r => r.ok ? r.blob() : null).then(b => b && createImageBitmap(b)).catch(() => null));
-  return bitmaps.get(i);
+async function bitmap(u) {
+  if (!u) return null;
+  if (!bitmaps.has(u)) bitmaps.set(u, fetch(img(u)).then(r => r.ok ? r.blob() : null).then(b => b && createImageBitmap(b)).catch(() => null));
+  return bitmaps.get(u);
 }
 
 // Words grouped into caption chunks of up to 4 words (or ~22 characters).
@@ -348,12 +391,12 @@ function endCard(ctx, v, t) {
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.globalAlpha = Math.min(1, t * 4);
   ctx.fillStyle = "#e8b830"; ctx.fillRect(W / 2 - 60, H * 0.40, 120, 10);
-  const u = new URL(page.url), path = u.pathname.replace(/\/$/, "");
-  const where = page.host + (path.length > 1 && path.length < 24 ? path : "");
+  const P = pg(v), path = P.url ? new URL(P.url).pathname.replace(/\/$/, "") : "";
+  const where = P.host ? P.host + (path.length > 1 && path.length < 24 ? path : "") : (P.title || "").slice(0, 40);
   const size = fit(ctx, where, 800, 110, W - 120);
   ctx.fillStyle = "#efeadc"; ctx.fillText(where, W / 2, H * 0.48);
   ctx.font = "500 52px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"; ctx.fillStyle = "#a59f8f";
-  wrap(ctx, (page.title || "").slice(0, 80), W - 200).slice(0, 2).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.48 + size / 2 + 70 + i * 64));
+  wrap(ctx, (P.host ? P.title || "" : "").slice(0, 80), W - 200).slice(0, 2).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.48 + size / 2 + 70 + i * 64));
   ctx.globalAlpha = 1;
 }
 
@@ -374,7 +417,7 @@ function frame(ctx, v, tl, bmps, t) {
 
 async function drawStill(canvas, v) {
   const ctx = canvas.getContext("2d");
-  const bmps = await Promise.all(v.scenes.map(s => bitmap(s.image)));
+  const bmps = await Promise.all(v.scenes.map(s => bitmap(s.image == null ? null : pg(v).images[s.image])));
   frame(ctx, v, timeline(v), bmps, Math.min(1.2, v.scenes[0].seconds * 0.6));
 }
 
@@ -391,7 +434,7 @@ async function pickCodec() {
 async function render(canvas, v, progress) {
   const { config, mux } = await pickCodec();
   const ctx = canvas.getContext("2d");
-  const bmps = await Promise.all(v.scenes.map(s => bitmap(s.image)));
+  const bmps = await Promise.all(v.scenes.map(s => bitmap(s.image == null ? null : pg(v).images[s.image])));
   let voices = [];
   if (v.voice) {
     progress(0, "Recording the voiceover…");

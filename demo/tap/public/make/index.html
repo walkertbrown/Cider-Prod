@@ -32,6 +32,9 @@ button:disabled{opacity:.5;cursor:default}
 video,canvas.preview{width:100%;max-width:240px;aspect-ratio:9/16;background:#000;border-radius:10px;display:block}
 label.ch{display:inline-flex;gap:6px;align-items:center;margin:4px 12px 4px 0}
 .status{min-height:1.4em}
+.prods{max-height:360px;overflow-y:auto;border-top:1px solid var(--line)}
+label.prod{display:grid;grid-template-columns:22px 48px 1fr;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer}
+label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
 </style>
 </head>
 <body><main>
@@ -60,6 +63,16 @@ label.ch{display:inline-flex;gap:6px;align-items:center;margin:4px 12px 4px 0}
     <p class="small muted" id="pWhy"></p>
   </div>
   <p class="status small" id="writeStatus"></p>
+</section>
+
+<section id="storeBox" hidden>
+  <div class="card">
+    <strong id="sTitle"></strong>
+    <p class="small muted" id="sNote" style="margin:4px 0 8px"></p>
+    <div id="sList" class="prods"></div>
+    <div class="row" style="margin-top:10px"><button class="primary" id="storeBtn">Write one per product</button></div>
+  </div>
+  <p class="status small" id="storeStatus"></p>
 </section>
 
 <section id="videos"></section>

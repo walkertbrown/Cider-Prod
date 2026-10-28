@@ -3,7 +3,7 @@
 // The key comes from the owner's Tap page; only its SHA-256 is kept (key:<hash> → account).
 // Tools write drafts and review links, never posts: a person presses the last button.
 
-import { safeHttp, readPages, writeScripts, underCap, captionFor, postInput, CREATE_POST, cleanTags } from "./make.js";
+import { safeHttp, readPages, writeScripts, underCap, captionFor, postInput, CREATE_POST, cleanTags, BUILD_VOICE } from "./make.js";
 
 const PROTOCOLS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const TEXT_NETS = new Set(["twitter", "bluesky", "threads", "linkedin", "facebook", "mastodon"]);
@@ -13,14 +13,6 @@ export async function sha256(s) {
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-const BUILD_VOICE = `
-
-This is a build-in-public update: the source is a maker's notes on what they just built or shipped, not a sales page.
-- Speak as the maker ("we shipped", "I built", "today"), concrete and honest. Use the real numbers in the notes.
-- Hook with the most interesting change or number. One clear point per video.
-- Only what is in the maker's notes is new. Anything else from the page is background: never call it shipped, new or "today".
-- Several videos: each takes a different angle on what shipped (the change, how it works, who it's for, a number), not other features.
-- The call to action invites people to try it or follow along, and names the site if one is given.`;
 
 const TOOLS = [
   { name: "make_build_video",
@@ -83,7 +75,7 @@ async function call(name, args, env, ctx) {
     const out = await writeScripts(env, page, Math.max(1, Math.min(5, +args.count || 1)), BUILD_VOICE);
     if (out.error) return fail(out.error);
     const id = d.rand(12).replace(/[^A-Za-z0-9]/g, "").slice(0, 14);
-    await env.TAP.put(`job:${id}`, JSON.stringify({ acct, page, videos: out.videos, note: out.note || "", at: Date.now() }), { expirationTtl: JOB_TTL });
+    await env.TAP.put(`job:${id}`, JSON.stringify({ acct, page: { ...page, build: true }, videos: out.videos, note: out.note || "", at: Date.now() }), { expirationTtl: JOB_TTL });
     const link = `${origin}/make/?job=${id}`;
     return ok(unread + `Review link (the owner opens it, renders, and drafts to Buffer): ${link}\n\n` +
       out.videos.map((v, i) => `Video ${i + 1}: ${v.angle}\n` + v.scenes.map(s => `  - ${s.text}`).join("\n") + `\n  Caption: ${v.caption}`).join("\n\n") +

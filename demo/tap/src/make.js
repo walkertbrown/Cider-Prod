@@ -80,6 +80,22 @@ export async function readPage(url) {
 
 // Several pages read as one source: the first is the main page (its address goes on the
 // end card); lines repeated across pages (menus, footers) count once.
+// A Shopify store's public catalogue: /products.json (or a collection's), plus /meta.json for its name and currency.
+export async function readStore(u) {
+  const get = async path => {
+    const r = await fetch(u.origin + path, { headers: { "user-agent": "Mozilla/5.0 (compatible; TapBot/1.0; +https://tap.bananafest-destiny.com)", accept: "application/json" }, cf: { cacheTtl: 1800, cacheEverything: true } });
+    return r.ok && (r.headers.get("content-type") || "").includes("json") ? r.json().catch(() => null) : null;
+  };
+  const coll = u.pathname.match(/\/collections\/([^/]+)/)?.[1];
+  const [list, meta] = await Promise.all([get(`${coll ? `/collections/${coll}` : ""}/products.json?limit=50`), get("/meta.json")]);
+  const products = (list?.products || []).filter(p => p.handle && p.title).map(p => ({
+    title: decode(p.title).slice(0, 120), url: `${u.origin}/products/${p.handle}`, type: p.product_type || "", vendor: p.vendor || "",
+    price: p.variants?.[0]?.price || "", was: p.variants?.[0]?.compare_at_price || "",
+    images: (p.images || []).map(i => i.src).filter(Boolean).slice(0, 6), text: strip(p.body_html || "").slice(0, 1500),
+  }));
+  return products.length ? { name: meta?.name || u.hostname, currency: meta?.currency || "", collection: coll || "", products } : null;
+}
+
 export async function readPages(urls) {
   const read = await Promise.all(urls.map(u => readPage(u).catch(e => ({ error: `Couldn't read it: ${e.message}` }))));
   const ok = read.filter(p => !p.error);
@@ -117,6 +133,15 @@ Rules:
 - Lines may also be read aloud by a narrator, so write them to sound natural spoken. In the last scene name the site the way a person says it (the host name, no "https", no slashes or paths).
 - caption: the post text for the networks, 1 to 3 short sentences plus the site address, at most 260 characters, no hashtags. title: at most 90 characters, for YouTube. hashtags: 3 to 6 relevant single words or CamelCase phrases, without "#".
 Return JSON only: {"note": string, "videos": [{"angle": string, "title": string, "caption": string, "hashtags": [string], "scenes": [{"text": string, "image": integer or null, "seconds": number}]}]}`;
+
+export const BUILD_VOICE = `
+
+This is a build-in-public update: the source is a maker's notes on what they just built or shipped, not a sales page.
+- Speak as the maker ("we shipped", "I built", "today"), concrete and honest. Use the real numbers in the notes.
+- Hook with the most interesting change or number. One clear point per video.
+- Only what is in the maker's notes is new. Anything else from the page is background: never call it shipped, new or "today".
+- Several videos: each takes a different angle on what shipped (the change, how it works, who it's for, a number), not other features.
+- The call to action invites people to try it or follow along, and names the site if one is given.`;
 
 export async function writeScripts(env, page, count, extra = "") {
   const input = `Host: ${page.host}\nURL: ${page.url}\nTitle: ${page.title}\nDescription: ${page.description}\n` +
@@ -212,7 +237,12 @@ export async function api(req, env, path, { acct, user }, d) {
     if (urls.length > 5) return json({ error: "Up to 5 links at a time." }, 400);
     const bad = raw.find((x, i) => !urls[i]);
     if (bad) return json({ error: `That isn't a web address: ${bad.slice(0, 80)}` }, 400);
-    try { const page = await readPages(urls); return json(page, page.error ? 422 : 200); }
+    try {
+      const [page, store] = await Promise.all([readPages(urls), readStore(urls[0]).catch(() => null)]);
+      if (store) return json(page.error ? { url: urls[0].href, host: urls[0].hostname, title: store.name, description: "", pages: [], text: "", images: [], products: [],
+        suggested: 1, why: "", failed: [page.error], store } : { ...page, store });
+      return json(page, page.error ? 422 : 200);
+    }
     catch (e) { return json({ error: `Couldn't read the page: ${e.message}` }, 422); }
   }
   if (path === "/api/scripts" && req.method === "POST") {
@@ -220,7 +250,7 @@ export async function api(req, env, path, { acct, user }, d) {
     if (!page?.text && !page?.description) return json({ error: "Read a page first." }, 400);
     const capped = await underCap(env, acct, "script");
     if (capped) return json({ error: capped }, 429);
-    const out = await writeScripts(env, page, Math.max(1, Math.min(10, +count || 1)));
+    const out = await writeScripts(env, page, Math.max(1, Math.min(10, +count || 1)), page.build ? BUILD_VOICE : "");
     return json(out, out.error ? 502 : 200);
   }
   if (path === "/api/voice" && req.method === "POST") {
