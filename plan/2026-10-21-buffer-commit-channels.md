@@ -22,6 +22,11 @@ If it can, every tile shows views → clicks → taps: what the network saw,
 what it says was clicked, and how many people actually arrived. The gap
 between clicks and taps is the number nobody has. Only use the live
 names; skip the deprecated ones.
+28 Oct, the first call: it cannot. `metrics` and `metricsUpdatedAt` need
+the scope `insights:read`, and Buffer refuses that scope for this app
+(`invalid_scope`, "requested scope is not allowed"); its permission form has
+no insights box. Tiles show taps only until Buffer opens the scope. Step 2
+waits on that.
 
 ## Two ways a visitor arrives
 - **Bio mode**, for networks where a post can't carry a working link. The
