@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-<title>Tap: make shorts from a link</title>
-<meta name="description" content="Paste a link. Tap writes short videos from the page, renders them in your browser and drafts them into Buffer.">
+<title>Dailies: make shorts from a link</title>
+<meta name="description" content="Paste a link. Dailies writes short videos from the page, renders them in your browser and drafts them into Buffer.">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
@@ -41,9 +41,9 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
 </style>
 </head>
 <body><main>
-<a href="/me">Tap</a>
+<a href="/me">Dailies</a>
 <h1>Make shorts from a link</h1>
-<p class="muted">Paste a page, or a few: a product, an app, an article, a listing. Tap reads it, writes short vertical videos from what's on it, renders them here in your browser, and puts them into Buffer as drafts. Nothing is posted until you post it.</p>
+<p class="muted">Paste a page, or a few: a product, an app, an article, a listing. Dailies reads it, writes short vertical videos from what's on it, renders them here in your browser, and puts them into Buffer as drafts. Nothing is posted until you post it.</p>
 
 <form id="readForm">
   <textarea id="url" rows="3" placeholder="https://your-site.com&#10;https://your-site.com/a-feature" required></textarea>
@@ -53,7 +53,7 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
 <p class="status small" id="readStatus"></p>
 <details class="card" id="clipBox">
   <summary><strong>Or cut a long video into clips</strong></summary>
-  <p class="small muted" style="margin:6px 0 8px">Pick a talk, a stream, a podcast or a demo (MP4 or MOV, up to 60 minutes). Tap listens to it, picks the moments that stand on their own, and cuts each into a vertical clip with captions of the words spoken. The video stays on your device; only its sound is sent to be turned into text.</p>
+  <p class="small muted" style="margin:6px 0 8px">Pick a talk, a stream, a podcast or a demo (MP4 or MOV, up to 60 minutes). Dailies listens to it, picks the moments that stand on their own, and cuts each into a vertical clip with captions of the words spoken. The video stays on your device; only its sound is sent to be turned into text.</p>
   <div class="row"><input type="file" id="clipFile" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" style="flex:1;min-width:220px"></div>
   <p class="small muted" id="clipInfo" style="margin:4px 0"></p>
   <div class="row">
@@ -93,7 +93,7 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
 <section id="planBox" hidden>
   <div class="card">
     <strong>Plan a month</strong>
-    <p class="small muted" style="margin:4px 0 8px">Tap lays out dated posts from this page for the networks you've connected in Buffer: videos for Instagram, TikTok and YouTube, text for the others. Write any video from it below, or save the plan into Buffer as Ideas.</p>
+    <p class="small muted" style="margin:4px 0 8px">Dailies lays out dated posts from this page for the networks you've connected in Buffer: videos for Instagram, TikTok and YouTube, text for the others. Write any video from it below, or save the plan into Buffer as Ideas.</p>
     <div class="row">
       <label for="perWeek">Posts a week</label><select id="perWeek" style="width:auto"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>7</option></select>
       <label for="weeks">Weeks</label><select id="weeks" style="width:auto"><option>1</option><option>2</option><option>3</option><option selected>4</option></select>
@@ -118,7 +118,7 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
   <div class="status small" id="allOut"></div>
 </div>
 
-<p class="small muted" style="margin-top:40px">Videos are encoded in your browser (Chrome, Edge or recent Safari). A video you upload is kept at Tap for 30 days so Buffer can fetch it, then deleted. <a href="/privacy">Privacy</a>.</p>
+<p class="small muted" style="margin-top:40px">Videos are encoded in your browser (Chrome, Edge or recent Safari). A video you upload is kept at Dailies for 30 days so Buffer can fetch it, then deleted. <a href="/privacy">Privacy</a>.</p>
 </main>
 <script type="module" src="/make/app.js"></script>
 <script type="module" src="/make/clips.js"></script>

@@ -218,3 +218,19 @@ Already in place: several videos per link (1–10), several links, and music.
   Chrome for Testing (it decodes H.264 and AAC). The test file is a
   94-second H.264/AAC talk made here, with a clock on screen to check the
   cut points.
+
+## The name: Dailies (28 Oct)
+The boss, asked whether it's still "Tap": "It is your product". Tap was the
+bio-link counter; the app now makes videos. Of the names I offered, Cutroom
+is already an AI vertical-video editor (cutroomai.com) and Spool is an iOS
+music-video editor, so it's **Dailies**: the short cuts you make every day.
+- Every visible "Tap" becomes "Dailies": page titles, /make, /me, privacy,
+  the MCP server name and messages, and new Buffer tags ("Dailies: …").
+  The landing page is rewritten for what it is now: make shorts, plan
+  them, draft them into Buffer, and the Claude Code MCP.
+- It stays on tap.bananafest-destiny.com for now. A new subdomain needs a
+  new callback URL in the Buffer app (the boss's), so it waits for them.
+  Keys keep their `tap_` prefix and the MCP URL is unchanged, so nothing
+  already set up breaks.
+- The Buffer app's own name (on Buffer's sign-in screen) is the boss's to
+  change in Buffer's app settings.

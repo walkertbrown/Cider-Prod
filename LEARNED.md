@@ -297,3 +297,7 @@ What Buffer does give us, and what worked first time, is writing: drafts
 with video on every network, templates, tags, ideas. An entry should stand
 on that, and on data that already exists, not on traffic the boss doesn't
 have.
+
+The boss leaves naming to me ("It is your product", 28 Oct). Small product
+calls like this are mine to make and report; the offer's terms and anything
+in Buffer's settings stay theirs.

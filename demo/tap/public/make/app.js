@@ -10,15 +10,15 @@ const img = u => u.startsWith(location.origin + "/i/") ? u : `/api/img?u=${encod
 
 call.raw = async (path, body) => {
   const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Tap answered ${r.status}.`);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Dailies answered ${r.status}.`);
   return r.arrayBuffer();
 };
 
 async function call(path, body, method = "POST") {
   const r = await fetch(path, { method, headers: { "content-type": "application/json" }, body: body && JSON.stringify(body) });
-  const d = await r.json().catch(() => ({ error: `Tap answered ${r.status}.` }));
+  const d = await r.json().catch(() => ({ error: `Dailies answered ${r.status}.` }));
   if (r.status === 401) location.href = "/auth/start";
-  if (!r.ok || d.error) throw new Error(d.error || `Tap answered ${r.status}.`);
+  if (!r.ok || d.error) throw new Error(d.error || `Dailies answered ${r.status}.`);
   return d;
 }
 

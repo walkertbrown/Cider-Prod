@@ -1,4 +1,4 @@
-// Tap: which of your Buffer posts sent people. Buffer Commit, 28 Oct – 13 Nov.
+// Dailies: short videos from a link, a store or a long video, planned and drafted into Buffer. Buffer Commit, 28 Oct – 13 Nov.
 //   GET  /auth/start      redirect to Buffer's consent screen
 //   GET  /auth/callback   exchange the code, keep the tokens, sign the owner in
 //   GET  /me              the owner's page: each post, its taps, its destination
@@ -6,7 +6,7 @@
 //   POST /me/keep         Keep this: a Buffer template and tag from a post
 //   POST /me/again        Post it again: tagged drafts in Buffer, never sent
 //   POST /me/forget       drop a kept post, and its template and tag
-//   POST /me/disconnect   delete everything Tap keeps for the account
+//   POST /me/disconnect   delete everything Dailies keeps for the account
 //   GET  /u/<name>        the public bio page: one tile per post
 //   GET  /p/<name>/<post> count a tap, then send the visitor on
 //   GET  /go/<name>       the bio page's skip link, counted the same way
@@ -244,7 +244,7 @@ async function tap(env, ctx, req, name, sid) {
   return new Response(null, { status: 302, headers: { location: to || `${HOME}/u/${name}`, "cache-control": "no-store", "referrer-policy": "no-referrer-when-downgrade" } });
 }
 
-// Visitors' browsers never fetch from Buffer: Tap fetches each thumbnail once
+// Visitors' browsers never fetch from Buffer: Dailies fetches each thumbnail once
 // and Cloudflare keeps it for a day.
 async function thumb(env, name, sid) {
   const acct = await env.TAP.get(`name:${name}`);
@@ -270,7 +270,7 @@ ${p.thumb ? `<img src="/t/${user.name}/${shortId(p.id)}" alt="" loading="lazy">`
 <h1>Which post brought you here?</h1>
 <p>Tap the one you saw. <a href="/go/${user.name}">Or skip straight to the site</a>.</p>
 <div class="grid">${tiles || '<p class="note">No posts yet.</p>'}</div>
-<p class="note" style="margin-top:32px">Made with <a href="/">Tap</a>. Tapping counts one visit for that post: a number, with no cookie and no IP kept.</p>`);
+<p class="note" style="margin-top:32px">Made with <a href="/">Dailies</a>. Tapping counts one visit for that post: a number, with no cookie and no IP kept.</p>`);
 }
 
 async function mePage(env, ctx, req, { acct, user }) {
@@ -292,11 +292,11 @@ ${kept.has(p.id) ? '<span class="note">Kept</span>' : `<button class="small" for
   const flash = user.flash;
   if (flash) { delete user.flash; ctx.waitUntil(putJSON(env, `user:${acct}`, user)); }
   return page("Your posts", `
-<a href="/">Tap</a>
+<a href="/">Dailies</a>
 <h1>Your posts</h1>
 <p><a class="primary" href="/make/" style="display:inline-block;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:600">Make shorts from a link</a></p>
 ${error ? `<p class="note" style="color:#c0392b">Couldn't refresh from Buffer: ${esc(error)} ${error.includes("Sign in") ? '<a href="/auth/start">Sign in</a>' : ""}</p>` : ""}
-<p>Your bio link: <a href="${bio}"><b>${bio}</b></a><br><span class="note">Put it in your Instagram, TikTok or YouTube bio. Visitors pick the post they saw, and Tap counts it before sending them on.</span></p>
+<p>Your bio link: <a href="${bio}"><b>${bio}</b></a><br><span class="note">Put it in your Instagram, TikTok or YouTube bio. Visitors pick the post they saw, and Dailies counts it before sending them on.</span></p>
 ${flash ? `<p class="flash">${esc(flash)}</p>` : ""}
 <p><span class="n">${total}</span> ${total === 1 ? "person" : "people"} so far${total ? "" : ". Nothing is counted until someone taps your bio link"}. ${skip.p} of them skipped straight to the site.</p>
 ${keptSection(user, c)}
@@ -307,17 +307,17 @@ ${keptSection(user, c)}
 <table><tr><th></th><th>Post, and where it sends people</th><th class="num">People</th></tr>${rows || '<tr><td></td><td class="note">No sent posts in Buffer yet.</td><td></td></tr>'}</table>
 <p><button class="primary">Save</button> <a class="btn" href="/me?refresh">Refresh from Buffer</a></p>
 </form>
-<p class="note">A person is counted when a browser opens the link as a page. Link previews, checkers and crawlers are counted apart as fetchers. Posts were read from Buffer ${user.postsAt ? new Date(user.postsAt).toUTCString().slice(5, 22) + " UTC" : "not yet"}. Buffer doesn't let outside apps read post views or clicks yet, so this page shows only what Tap counts itself.</p>
+<p class="note">A person is counted when a browser opens the link as a page. Link previews, checkers and crawlers are counted apart as fetchers. Posts were read from Buffer ${user.postsAt ? new Date(user.postsAt).toUTCString().slice(5, 22) + " UTC" : "not yet"}. Buffer doesn't let outside apps read post views or clicks yet, so this page shows only what Dailies counts itself.</p>
 <h2>Claude Code</h2>
-<p class="note">Let Claude Code make videos of what you build: it sends what shipped, Tap writes the scripts, and you get a link here to render and draft them. Nothing posts without you.${user.mcpKey ? ` Your key was made ${esc(day(user.mcpKey.at))} and ends in ${esc(user.mcpKey.tail)}.` : ""}</p>
+<p class="note">Let Claude Code make videos of what you build: it sends what shipped, Dailies writes the scripts, and you get a link here to render and draft them. Nothing posts without you.${user.mcpKey ? ` Your key was made ${esc(day(user.mcpKey.at))} and ends in ${esc(user.mcpKey.tail)}.` : ""}</p>
 <form method="post" action="/me/key"${user.mcpKey ? ` onsubmit="return confirm('Make a new key? The old one stops working.')"` : ""}><button>${user.mcpKey ? "Make a new Claude key" : "Make a Claude key"}</button></form>
-<form method="post" action="/me/disconnect" onsubmit="return confirm('Delete everything Tap keeps for this account?')"><button>Disconnect and delete</button></form>`);
+<form method="post" action="/me/disconnect" onsubmit="return confirm('Delete everything Dailies keeps for this account?')"><button>Disconnect and delete</button></form>`);
 }
 
 // ---- Keep this / Post it again ----------------------------------------------
 
 // A kept post's record: the original, plus every post carrying its tag,
-// whether Tap drafted it or the owner tagged it by hand in Buffer.
+// whether Dailies drafted it or the owner tagged it by hand in Buffer.
 function keptStats(user, k, c) {
   const posts = user.posts.filter(p => p.id === k.post || p.tagIds?.includes(k.tagId));
   const by = {};
@@ -334,7 +334,7 @@ function untried(user, k, posts) {
 
 function keptSection(user, c) {
   const list = (user.kept || []).map(k => ({ k, ...keptStats(user, k, c) })).sort((a, b) => b.people - a.people);
-  if (!list.length) return `<h2>Kept</h2><p class="note">Press "Keep this" on a post that worked. Tap saves it as a template and a tag in your Buffer, then can draft it again for your other networks.</p>`;
+  if (!list.length) return `<h2>Kept</h2><p class="note">Press "Keep this" on a post that worked. Dailies saves it as a template and a tag in your Buffer, then can draft it again for your other networks.</p>`;
   return `<h2>Kept</h2>` + list.map(({ k, posts, people, best }) => {
     const left = untried(user, k, posts);
     return `<div class="kept"><b>${esc(k.title)}</b><br>
@@ -354,7 +354,7 @@ const failText = (res, key) => errText(res) || res.data?.[key]?.message || res.d
 async function keep(req, env, { acct, user }) {
   const id = (await req.formData()).get("post");
   const p = user.posts.find(p => p.id === id);
-  if (!p) return done(env, acct, user, "That post isn't in Tap's copy any more. Refresh from Buffer and try again.");
+  if (!p) return done(env, acct, user, "That post isn't in Dailies' copy any more. Refresh from Buffer and try again.");
   if ((user.kept || []).some(k => k.post === id)) return done(env, acct, user, "Already kept.");
   const token = await accessToken(env, acct);
   if (!token) return done(env, acct, user, "Buffer access has lapsed. Sign in again.");
@@ -370,7 +370,7 @@ async function keep(req, env, { acct, user }) {
   const words = p.title.replace(/[^\p{L}\p{N} ]/gu, "").split(/\s+/).slice(0, 4).join(" ").slice(0, 30);
   let tag, tagName;
   for (const suffix of ["", ` ${shortId(p.id).slice(-4)}`]) {
-    tagName = `Tap: ${words}${suffix}`;
+    tagName = `Dailies: ${words}${suffix}`;
     tag = await gql(token, `mutation($o:OrganizationId!,$n:String!){ createTag(input:{organizationId:$o, tag:{name:$n, color:"#e8b830"}}){
       __typename ... on TagActionSuccess { tag { id } } ... on InvalidInputError { message } ... on DuplicateError { message } ... on UnauthorizedError { message } ... on UnexpectedError { message } } }`, { o: user.orgId, n: tagName });
     if (tag.data?.createTag?.__typename !== "DuplicateError") break;
@@ -401,7 +401,7 @@ async function again(req, env, { acct, user }) {
   const id = (await req.formData()).get("kept");
   const k = (user.kept || []).find(k => k.post === id);
   const p = k && user.posts.find(p => p.id === k.post);
-  if (!p) return done(env, acct, user, "That kept post isn't in Tap's copy any more.");
+  if (!p) return done(env, acct, user, "That kept post isn't in Dailies' copy any more.");
   const token = await accessToken(env, acct);
   if (!token) return done(env, acct, user, "Buffer access has lapsed. Sign in again.");
   const c = await counts(env, acct);
@@ -416,7 +416,7 @@ async function again(req, env, { acct, user }) {
     else failed.push(`${net(ch.service)} (${failText(r, "createPost")})`);
   }
   return done(env, acct, user, [
-    made.length ? `Drafts made in Buffer for ${made.join(", ")}, tagged "${k.tagName}". Check them and send them from Buffer; Tap never sends.` : "",
+    made.length ? `Drafts made in Buffer for ${made.join(", ")}, tagged "${k.tagName}". Check them and send them from Buffer; Dailies never sends.` : "",
     failed.length ? `Not drafted: ${failed.join("; ")}.` : "",
   ].filter(Boolean).join(" ") || "Nothing left to draft.");
 }
@@ -452,13 +452,13 @@ async function makeKey(req, env, { acct, user }) {
   user.mcpKey = { hash: await sha256(key), tail: key.slice(-4), at: new Date().toISOString() };
   await env.TAP.put(`key:${user.mcpKey.hash}`, acct);
   await putJSON(env, `user:${acct}`, user);
-  const cmd = `claude mcp add --transport http tap ${HOME}/mcp --header "Authorization: Bearer ${key}"`;
-  return page("Your Claude key", `<a href="/me">Tap</a><h1>Your Claude key</h1>
-<p>Copy it now: Tap keeps only a fingerprint of it and can't show it again.</p>
+  const cmd = `claude mcp add --transport http dailies ${HOME}/mcp --header "Authorization: Bearer ${key}"`;
+  return page("Your Claude key", `<a href="/me">Dailies</a><h1>Your Claude key</h1>
+<p>Copy it now: Dailies keeps only a fingerprint of it and can't show it again.</p>
 <p><code style="word-break:break-all">${esc(key)}</code></p>
 <p>In your project's folder, run this once:</p>
 <pre style="white-space:pre-wrap;word-break:break-all"><code>${esc(cmd)}</code></pre>
-<p class="note">Then ask Claude Code, after you ship something, to "make a build video with Tap". It sends what changed (and screenshots or the live link if you like), and gets back a review link to this account. Anyone with the key can make scripts and text drafts here, never posts. Lost it? Make a new one; the old one stops working.</p>
+<p class="note">Then ask Claude Code, after you ship something, to "make a build video with Dailies". It sends what changed (and screenshots or the live link if you like), and gets back a review link to this account. Anyone with the key can make scripts and text drafts here, never posts. Lost it? Make a new one; the old one stops working.</p>
 <p><a href="/me">Back to your posts</a></p>`, { headers: { "cache-control": "no-store" } });
 }
 
@@ -471,7 +471,7 @@ async function disconnect(env, { acct, user }) {
     cursor = l.list_complete ? null : l.cursor;
   } while (cursor);
   await Promise.all(keys.map(k => env.TAP.delete(k)));
-  return page("Disconnected", `<a href="/">Tap</a><h1>Disconnected</h1><p>Everything Tap kept for this account is deleted: the Buffer access, the copy of your posts, the counts, the bio link, the videos you made and your Claude key. To remove Tap from Buffer's side too, open your Buffer settings, then Apps.</p>`,
+  return page("Disconnected", `<a href="/">Dailies</a><h1>Disconnected</h1><p>Everything Dailies kept for this account is deleted: the Buffer access, the copy of your posts, the counts, the bio link, the videos you made and your Claude key. To remove Dailies from Buffer's side too, open your Buffer settings, then Apps.</p>`,
     { headers: { "set-cookie": "tap_sid=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax" } });
 }
 

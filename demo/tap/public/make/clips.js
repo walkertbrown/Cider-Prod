@@ -1,5 +1,5 @@
 // Long video to clips, in the browser: read the MP4/MOV index (mp4box.js), send the sound in
-// 16 kHz WAV pieces for timed words, let Tap pick the moments, then cut each one to 9:16 with
+// 16 kHz WAV pieces for timed words, let Dailies pick the moments, then cut each one to 9:16 with
 // word-timed captions (WebCodecs decode → canvas → encode → MP4). The video itself never leaves the device.
 import { createFile, DataStream } from "https://cdn.jsdelivr.net/npm/mp4box@0.5.3/+esm";
 import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs";
@@ -28,7 +28,7 @@ async function boxes(file) {
 async function open(file) {
   const top = await boxes(file);
   const moov = top.find(b => b.type === "moov");
-  if (!moov) throw new Error("That isn't an MP4 or MOV video Tap can read.");
+  if (!moov) throw new Error("That isn't an MP4 or MOV video Dailies can read.");
   if (moov.size > 200 * 1048576) throw new Error("This video's index is too large.");
   const ftyp = top.find(b => b.type === "ftyp");
   const parts = await Promise.all([ftyp, moov].filter(Boolean).map(b => file.slice(b.at, b.at + b.size).arrayBuffer()));
@@ -127,7 +127,7 @@ async function listen(progress) {
   const send = async (samples, at) => {
     progress(`Listening… part ${++sent} of ${pieces}`);
     const r = await fetch("/api/transcribe", { method: "POST", headers: { "content-type": "audio/wav" }, body: wav(samples) });
-    const d = await r.json().catch(() => ({ error: `Tap answered ${r.status}.` }));
+    const d = await r.json().catch(() => ({ error: `Dailies answered ${r.status}.` }));
     if (!r.ok || d.error) throw new Error(d.error);
     all.words.push(...d.words.map(w => ({ ...w, s: w.s + at, e: w.e + at })));
     all.segments.push(...d.segments.map(g => ({ ...g, s: g.s + at, e: g.e + at })));

@@ -1,6 +1,6 @@
-// Tap for Claude Code: a remote MCP server (Streamable HTTP, stateless JSON-RPC over POST).
+// Dailies for Claude Code: a remote MCP server (Streamable HTTP, stateless JSON-RPC over POST).
 //   claude mcp add --transport http tap https://tap.bananafest-destiny.com/mcp --header "Authorization: Bearer <tap key>"
-// The key comes from the owner's Tap page; only its SHA-256 is kept (key:<hash> → account).
+// The key comes from the owner's Dailies page; only its SHA-256 is kept (key:<hash> → account).
 // Tools write drafts and review links, never posts: a person presses the last button.
 
 import { safeHttp, readPages, writeScripts, underCap, captionFor, postInput, CREATE_POST, cleanTags, BUILD_VOICE } from "./make.js";
@@ -16,7 +16,7 @@ export async function sha256(s) {
 
 const TOOLS = [
   { name: "make_build_video",
-    description: "Turn what you just built into short vertical videos for building in public. Pass what shipped (title, what changed, details with real numbers) and, if there is one, the live URL and screenshots. Tap writes the scripts and returns a review link: the owner opens it, renders the videos in their browser (voice, music optional) and drafts them to Buffer. Nothing is posted or drafted by this call.",
+    description: "Turn what you just built into short vertical videos for building in public. Pass what shipped (title, what changed, details with real numbers) and, if there is one, the live URL and screenshots. Dailies writes the scripts and returns a review link: the owner opens it, renders the videos in their browser (voice, music optional) and drafts them to Buffer. Nothing is posted or drafted by this call.",
     inputSchema: { type: "object", required: ["title", "what_changed"], properties: {
       title: { type: "string", description: "Short name of what shipped, e.g. 'Music on every clip'" },
       what_changed: { type: "string", description: "What is new, in plain words, 1-5 sentences" },
@@ -54,7 +54,7 @@ async function call(name, args, env, ctx) {
       const u = safeHttp(String(args.url));
       if (!u) return fail("url isn't a public web address.");
       const read = await readPages([u]);
-      if (read.error) { page.url = u.href; page.host = u.hostname; unread = `Tap couldn't read ${u.href} (${read.error}), so the scripts use your notes only; the videos still send people there.\n\n`; }
+      if (read.error) { page.url = u.href; page.host = u.hostname; unread = `Dailies couldn't read ${u.href} (${read.error}), so the scripts use your notes only; the videos still send people there.\n\n`; }
       else page = { ...read, title: page.title };
     }
     page.text = `# What shipped (the maker's notes)\n${notes}\n\n${page.text || ""}`.slice(0, 14000);
@@ -87,7 +87,7 @@ async function call(name, args, env, ctx) {
     const textCh = (user.channels || []).filter(c => TEXT_NETS.has(c.service) && (!args.channel_ids?.length || args.channel_ids.includes(c.id)));
     if (!textCh.length) return fail("No text channels (X, Bluesky, Threads, LinkedIn, Facebook, Mastodon) are connected in Buffer. Instagram, TikTok and YouTube need a video: use make_build_video.");
     const token = await d.accessToken(env, acct);
-    if (!token) return fail("Buffer access has lapsed. The owner needs to sign in to Tap again.");
+    if (!token) return fail("Buffer access has lapsed. The owner needs to sign in to Dailies again.");
     const lines = [];
     for (const ch of textCh) {
       const r = await d.gql(token, CREATE_POST, { i: postInput(ch, { text: captionFor(ch.service, text, cleanTags(args.hashtags)) }) });
@@ -98,7 +98,7 @@ async function call(name, args, env, ctx) {
   }
   if (name === "queue_status") {
     const token = await d.accessToken(env, acct);
-    if (!token) return fail("Buffer access has lapsed. The owner needs to sign in to Tap again.");
+    if (!token) return fail("Buffer access has lapsed. The owner needs to sign in to Dailies again.");
     const Q = `query($o:OrganizationId!,$s:[PostStatus!]){ posts(first:100, input:{organizationId:$o, filter:{status:$s}}){ edges{ node{ channelService } } } }`;
     const count = async status => {
       const r = await d.gql(token, Q, { o: user.orgId, s: [status] });
@@ -120,14 +120,14 @@ async function handle(msg, env, ctx) {
   if (id === undefined) return null; // a notification
   if (method === "initialize") return reply({
     protocolVersion: PROTOCOLS.includes(params.protocolVersion) ? params.protocolVersion : PROTOCOLS[0],
-    capabilities: { tools: {} }, serverInfo: { name: "tap", title: "Tap for Buffer", version: "0.1.0" },
-    instructions: "Tap turns what you just built into short videos and Buffer drafts. Call make_build_video after shipping something; give real numbers and the live URL. The owner reviews and drafts from the link it returns.",
+    capabilities: { tools: {} }, serverInfo: { name: "dailies", title: "Dailies for Buffer", version: "0.1.0" },
+    instructions: "Dailies turns what you just built into short videos and Buffer drafts. Call make_build_video after shipping something; give real numbers and the live URL. The owner reviews and drafts from the link it returns.",
   });
   if (method === "ping") return reply({});
   if (method === "tools/list") return reply({ tools: TOOLS });
   if (method === "tools/call") {
     try { return reply(await call(params.name, params.arguments || {}, env, ctx)); }
-    catch (e) { return reply(fail(`Tap hit an error: ${e.message}`)); }
+    catch (e) { return reply(fail(`Dailies hit an error: ${e.message}`)); }
   }
   return error(-32601, `Method not found: ${method}`);
 }
@@ -136,11 +136,11 @@ export async function mcp(req, env, d) {
   const url = new URL(req.url);
   const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "authorization, content-type, mcp-protocol-version, mcp-session-id", "access-control-allow-methods": "POST, OPTIONS" };
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
-  if (req.method !== "POST") return new Response("Tap's MCP endpoint takes POST (Streamable HTTP, no SSE stream).", { status: 405, headers: { allow: "POST", ...cors } });
+  if (req.method !== "POST") return new Response("Dailies' MCP endpoint takes POST (Streamable HTTP, no SSE stream).", { status: 405, headers: { allow: "POST", ...cors } });
   const key = (req.headers.get("authorization") || "").match(/^Bearer\s+(\S+)$/i)?.[1];
   const acct = key && await env.TAP.get(`key:${await sha256(key)}`);
   const user = acct && await d.getJSON(env, `user:${acct}`);
-  if (!user) return new Response(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Missing or unknown Tap key. Make one on https://tap.bananafest-destiny.com/me" } }),
+  if (!user) return new Response(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Missing or unknown Dailies key. Make one on https://tap.bananafest-destiny.com/me" } }),
     { status: 401, headers: { "content-type": "application/json", "www-authenticate": 'Bearer realm="tap"', ...cors } });
   let body; try { body = await req.json(); } catch { return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, { status: 400, headers: cors }); }
   const ctx = { acct, user, d, origin: url.origin };

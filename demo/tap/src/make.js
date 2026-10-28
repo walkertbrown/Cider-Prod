@@ -212,7 +212,7 @@ export async function underCap(env, acct, kind, n = 1) {
   const kA = `cap:${tag}${today()}:${acct}`, kAll = `cap:${tag}${today()}:all`;
   const [a, all] = await Promise.all([env.TAP.get(kA), env.TAP.get(kAll)]);
   if (+a + n > perAcct) return +a >= perAcct ? `You've used today's ${perAcct} ${CAP_WORDS[kind]}. More tomorrow.` : `That needs ${n} ${CAP_WORDS[kind]} and ${perAcct - +a} are left today.`;
-  if (+all + n > overall) return "Tap has reached today's limit for everyone. More tomorrow.";
+  if (+all + n > overall) return "Dailies has reached today's limit for everyone. More tomorrow.";
   await Promise.all([env.TAP.put(kA, String(+a + n), { expirationTtl: 2 * 86400 }), env.TAP.put(kAll, String(+all + n), { expirationTtl: 2 * 86400 })]);
   return "";
 }
@@ -452,7 +452,7 @@ export async function api(req, env, path, { acct, user }, d) {
     if (!token) return json({ error: "Buffer access has lapsed. Sign in again." }, 401);
     // One Buffer tag per video, so its posts can be found together later (Keep this).
     if (!kept.tagId && angle) {
-      const t = await d.gql(token, CREATE_TAG, { i: { organizationId: user.orgId, tag: { name: `Tap: ${String(angle)}`.slice(0, 40), color: "#e8b830" } } });
+      const t = await d.gql(token, CREATE_TAG, { i: { organizationId: user.orgId, tag: { name: `Dailies: ${String(angle)}`.slice(0, 40), color: "#e8b830" } } });
       if ((kept.tagId = t.data?.createTag?.tag?.id || "")) await d.putJSON(env, `user:${acct}`, user);
     }
     const results = [];

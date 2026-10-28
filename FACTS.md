@@ -328,3 +328,4 @@ up in the boss's Google Search Console. The boss: "Yes of course"
 - Visit counter: "Add our own visit counter to every page of your site and deploy it. Put this one line in the <head> of every page ... It only counts visits; it records nothing about a person. Change nothing else." (2026-10-27; script pulse.bananafest-destiny.com/p.js, data-site = the page's hostname)
 - Buffer Commit Q&A of 27 Oct, asked what it said about third-party apps getting insights:read: "I wasn't there" (2026-10-28).
 - Traffic from the boss's social bios: "Oh no one is going to come to my page from my social bios. it may have happened once or twice over months" (2026-10-28, on Tap's bio link).
+- Product name: "It is your product" (2026-10-28, asked whether the Buffer Commit app is still called "Tap"; naming left to me).

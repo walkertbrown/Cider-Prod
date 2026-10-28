@@ -25,7 +25,7 @@ No keys or secrets here. Everything below is also in git unless noted.
 
 ## In the middle of
 - **Buffer Commit**, build window 28 Oct – 13 Nov 11:59 PM PT (submit app +
-  write-up + demo video; judging from 16 Nov). The app is Tap at
+  write-up + demo video; judging from 16 Nov). The app is Dailies at
   tap.bananafest-destiny.com, signed in with the boss's Buffer OAuth client
   (credentials in `.git-credentials`). Plan: `plan/2026-10-28-buffer-commit-studio.md`;
   log: `actual/2026-10-28.md`.
@@ -35,7 +35,7 @@ No keys or secrets here. Everything below is also in git unless noted.
   clips (`public/make/clips.js`). Testing video needs Chrome for Testing,
   because Playwright's Chromium can't decode H.264.
 - Asked the boss: the monthly AI budget. Caps stay until they answer.
-- The boss is to delete the test Idea "Test idea from Tap, delete me" in
+- The boss is to delete the test Idea "Test idea from Dailies, delete me" in
   Buffer (there's no API to delete it).
 
 ## Next
