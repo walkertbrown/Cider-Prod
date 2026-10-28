@@ -149,6 +149,15 @@ This is a build-in-public update: the source is a maker's notes on what they jus
 - Several videos: each takes a different angle on what shipped (the change, how it works, who it's for, a number), not other features.
 - The call to action invites people to try it or follow along, and names the site if one is given.`;
 
+// "Make more like this": an earlier video the owner kept because it worked.
+const likeRules = like => `
+
+The owner kept an earlier video because it did well. Write new ones like it: the same kind of hook, length, tone and call to action, each on a new angle. Don't repeat its lines.
+Its angle: ${String(like.angle || "").slice(0, 80)}
+Its hook: ${String(like.hook || "").slice(0, 140)}
+Its lines: ${[].concat(like.lines || []).slice(0, 8).map(l => String(l).slice(0, 120)).join(" / ")}
+Its caption: ${String(like.caption || "").slice(0, 500)}`;
+
 export async function writeScripts(env, page, count, extra = "") {
   const input = `Host: ${page.host}\nURL: ${page.url}\nTitle: ${page.title}\nDescription: ${page.description}\n` +
     (page.products?.length ? `Products: ${JSON.stringify(page.products)}\n` : "") +
@@ -341,8 +350,8 @@ export async function api(req, env, path, { acct, user }, d) {
     if (!page?.text && !page?.description) return json({ error: "Read a page first." }, 400);
     const capped = await underCap(env, acct, "script");
     if (capped) return json({ error: capped }, 429);
-    const { angle } = body;
-    const extra = (page.build ? BUILD_VOICE : "") + (angle ? `\n\nWrite this one for a planned post. Its angle: ${String(angle.angle || "").slice(0, 80)}. Its hook: ${String(angle.hook || "").slice(0, 140)}. What it covers: ${String(angle.notes || "").slice(0, 400)}` : "");
+    const { angle, like } = body;
+    const extra = (page.build ? BUILD_VOICE : "") + (like ? likeRules(like) : "") + (angle ? `\n\nWrite this one for a planned post. Its angle: ${String(angle.angle || "").slice(0, 80)}. Its hook: ${String(angle.hook || "").slice(0, 140)}. What it covers: ${String(angle.notes || "").slice(0, 400)}` : "");
     const out = await writeScripts(env, page, Math.max(1, Math.min(10, +count || 1)), extra);
     return json(out, out.error ? 502 : 200);
   }
@@ -400,6 +409,11 @@ export async function api(req, env, path, { acct, user }, d) {
     await d.putJSON(env, `user:${acct}`, user);
     return json({ id, url: `${url.origin}/v/${id}.mp4` });
   }
+  if (path === "/api/like" && req.method === "GET") {
+    const k = (user.kept || []).find(k => k.post === url.searchParams.get("id"));
+    if (!k?.like) return json({ error: "That kept post isn't in your list any more." }, 404);
+    return json({ title: k.title, ...k.like });
+  }
   if (path === "/api/job" && req.method === "GET") {
     const job = await env.TAP.get(`job:${url.searchParams.get("id")}`, "json");
     if (!job || job.acct !== acct) return json({ error: "That review link has expired or belongs to another account." }, 404);
@@ -443,7 +457,7 @@ export async function api(req, env, path, { acct, user }, d) {
     return json({ results });
   }
   if (path === "/api/draft" && req.method === "POST") {
-    const { video, channels, caption, title, hashtags, angle } = await req.json().catch(() => ({}));
+    const { video, channels, caption, title, hashtags, angle, hook, lines, link } = await req.json().catch(() => ({}));
     const kept = (user.videos || []).find(v => v.id === video);
     if (!kept) return json({ error: "Upload the video first." }, 400);
     const chosen = (user.channels || []).filter(c => (channels || []).includes(c.id));
@@ -461,6 +475,15 @@ export async function api(req, env, path, { acct, user }, d) {
       const r = await d.gql(token, CREATE_POST, { i: postInput(ch, { text, video: `${url.origin}/v/${video}.mp4`, title, tagIds: kept.tagId ? [kept.tagId] : [] }) });
       const id = r.data?.createPost?.post?.id;
       results.push({ channel: ch.service, ok: !!id, error: id ? "" : (d.errText(r) || r.data?.createPost?.message || r.data?.createPost?.__typename || `HTTP ${r.status}`) });
+    }
+    // Remember what was made (outlasting the video file), so a winner can be kept and made again.
+    if (kept.tagId && results.some(x => x.ok)) {
+      const str = (x, n) => String(x || "").slice(0, n);
+      const rec = (user.made || []).find(m => m.tagId === kept.tagId) || { tagId: kept.tagId, at: new Date().toISOString() };
+      Object.assign(rec, { angle: str(angle, 80), title: str(title, 100), caption: str(caption, 500), hook: str(hook, 140),
+        lines: [].concat(lines || []).slice(0, 8).map(l => str(l, 120)), link: safeHttp(link || "")?.href || "" });
+      user.made = [rec, ...(user.made || []).filter(m => m !== rec)].slice(0, 100);
+      await d.putJSON(env, `user:${acct}`, user);
     }
     return json({ results });
   }

@@ -291,15 +291,17 @@ ${kept.has(p.id) ? '<span class="note">Kept</span>' : `<button class="small" for
   const skip = c.skip || { p: 0, f: 0 };
   const flash = user.flash;
   if (flash) { delete user.flash; ctx.waitUntil(putJSON(env, `user:${acct}`, user)); }
-  return page("Your posts", `
+  return page("Dailies", `
 <a href="/">Dailies</a>
-<h1>Your posts</h1>
+<h1>Your shorts</h1>
 <p><a class="primary" href="/make/" style="display:inline-block;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:600">Make shorts from a link</a></p>
 ${error ? `<p class="note" style="color:#c0392b">Couldn't refresh from Buffer: ${esc(error)} ${error.includes("Sign in") ? '<a href="/auth/start">Sign in</a>' : ""}</p>` : ""}
-<p>Your bio link: <a href="${bio}"><b>${bio}</b></a><br><span class="note">Put it in your Instagram, TikTok or YouTube bio. Visitors pick the post they saw, and Dailies counts it before sending them on.</span></p>
 ${flash ? `<p class="flash">${esc(flash)}</p>` : ""}
-<p><span class="n">${total}</span> ${total === 1 ? "person" : "people"} so far${total ? "" : ". Nothing is counted until someone taps your bio link"}. ${skip.p} of them skipped straight to the site.</p>
+${madeSection(user)}
 ${keptSection(user, c)}
+<details${total ? " open" : ""}><summary><h2 style="display:inline">Bio link and counts</h2></summary>
+<p>Your bio link: <a href="${bio}"><b>${bio}</b></a><br><span class="note">Put it in your Instagram, TikTok or YouTube bio. Visitors pick the post they saw, and Dailies counts it before sending them on.</span></p>
+<p><span class="n">${total}</span> ${total === 1 ? "person" : "people"} so far${total ? "" : ". Nothing is counted until someone taps your bio link"}. ${skip.p} of them skipped straight to the site.</p>
 <form method="post" action="/me">
 <h2>Posts</h2>
 <p><label>Main site (for the skip link, and posts with no address of their own)<br>
@@ -308,6 +310,7 @@ ${keptSection(user, c)}
 <p><button class="primary">Save</button> <a class="btn" href="/me?refresh">Refresh from Buffer</a></p>
 </form>
 <p class="note">A person is counted when a browser opens the link as a page. Link previews, checkers and crawlers are counted apart as fetchers. Posts were read from Buffer ${user.postsAt ? new Date(user.postsAt).toUTCString().slice(5, 22) + " UTC" : "not yet"}. Buffer doesn't let outside apps read post views or clicks yet, so this page shows only what Dailies counts itself.</p>
+</details>
 <h2>Claude Code</h2>
 <p class="note">Let Claude Code make videos of what you build: it sends what shipped, Dailies writes the scripts, and you get a link here to render and draft them. Nothing posts without you.${user.mcpKey ? ` Your key was made ${esc(day(user.mcpKey.at))} and ends in ${esc(user.mcpKey.tail)}.` : ""}</p>
 <form method="post" action="/me/key"${user.mcpKey ? ` onsubmit="return confirm('Make a new key? The old one stops working.')"` : ""}><button>${user.mcpKey ? "Make a new Claude key" : "Make a Claude key"}</button></form>
@@ -332,15 +335,35 @@ function untried(user, k, posts) {
   return (user.channels || []).filter(ch => !ran.has(ch.id));
 }
 
+// The video a sent post came from, if Dailies drafted it (its tag is the video's).
+const madeFor = (user, p) => (user.made || []).find(m => p.tagIds?.includes(m.tagId));
+
+// Made with Dailies: each drafted video, and the networks it has gone out on.
+function madeSection(user) {
+  const made = (user.made || []).slice(0, 30);
+  if (!made.length) return `<h2>Made with Dailies</h2><p class="note">Nothing drafted yet. <a href="/make/">Make shorts</a>, draft them, and send them from Buffer. Each one shows up here once it's sent.</p>`;
+  const kept = new Set((user.kept || []).map(k => k.tagId));
+  const rows = made.map(m => {
+    const sent = user.posts.filter(p => p.tagIds?.includes(m.tagId)).sort((a, b) => a.sentAt < b.sentAt ? -1 : 1);
+    const where = sent.length ? `Sent on ${sent.map(p => `${net(p.service)} ${day(p.sentAt)}`).join(", ")}` : "Drafted, not sent yet";
+    const act = kept.has(m.tagId) ? '<span class="note">Kept</span>'
+      : sent.length ? `<form method="post" action="/me/keep"><button class="small" name="post" value="${esc(sent[0].id)}">Keep this</button></form>` : "";
+    return `<tr><td><b>${esc(m.title || m.angle)}</b><br><span class="note">${esc(m.hook)}</span><br><span class="note">${esc(where)}</span></td><td class="num">${act}</td></tr>`;
+  }).join("");
+  return `<h2>Made with Dailies</h2>
+<p class="note">Buffer doesn't let apps read views yet, but you can see them in Buffer's analytics. When one did well, press Keep this: Dailies saves it as a template and can make more like it.</p>
+<table>${rows}</table>`;
+}
+
 function keptSection(user, c) {
   const list = (user.kept || []).map(k => ({ k, ...keptStats(user, k, c) })).sort((a, b) => b.people - a.people);
-  if (!list.length) return `<h2>Kept</h2><p class="note">Press "Keep this" on a post that worked. Dailies saves it as a template and a tag in your Buffer, then can draft it again for your other networks.</p>`;
+  if (!list.length) return `<h2>Kept</h2><p class="note">Press "Keep this" on a post that worked. Dailies saves it as a template in your Buffer, can draft it again for your other networks, and makes more like it.</p>`;
   return `<h2>Kept</h2>` + list.map(({ k, posts, people, best }) => {
     const left = untried(user, k, posts);
     return `<div class="kept"><b>${esc(k.title)}</b><br>
-<span class="note">${posts.length} post${posts.length === 1 ? "" : "s"} · <b>${people}</b> ${people === 1 ? "person" : "people"}${best ? ` · best on ${esc(net(best))}` : ""} · template and tag "${esc(k.tagName)}" in Buffer${k.drafts?.length ? ` · drafted for ${esc(k.drafts.map(d => net(d.service)).join(", "))}` : ""}</span><br>
-${left.length ? `<form method="post" action="/me/again"><button class="small primary" name="kept" value="${esc(k.post)}">Post it again: draft for ${esc(left.map(ch => net(ch.service)).join(", "))}</button></form> ` : ""}
-<form method="post" action="/me/forget" onsubmit="return confirm('Forget this, and delete its template and tag in Buffer?')"><button class="small" name="kept" value="${esc(k.post)}">Forget</button></form></div>`;
+<span class="note">${posts.length} post${posts.length === 1 ? "" : "s"}${k.ownTag === false ? "" : ` · <b>${people}</b> ${people === 1 ? "person" : "people"}${best ? ` · best on ${esc(net(best))}` : ""}`} · template and tag "${esc(k.tagName)}" in Buffer${k.drafts?.length ? ` · drafted for ${esc(k.drafts.map(d => net(d.service)).join(", "))}` : ""}</span><br>
+${k.like?.link ? `<a class="btn small" href="/make/?like=${encodeURIComponent(k.post)}">Make more like this</a> ` : ""}${left.length ? `<form method="post" action="/me/again"><button class="small primary" name="kept" value="${esc(k.post)}">Post it again: draft for ${esc(left.map(ch => net(ch.service)).join(", "))}</button></form> ` : ""}
+<form method="post" action="/me/forget" onsubmit="return confirm('Forget this, and delete what Dailies made for it in Buffer?')"><button class="small" name="kept" value="${esc(k.post)}">Forget</button></form></div>`;
   }).join("");
 }
 
@@ -358,8 +381,10 @@ async function keep(req, env, { acct, user }) {
   if ((user.kept || []).some(k => k.post === id)) return done(env, acct, user, "Already kept.");
   const token = await accessToken(env, acct);
   if (!token) return done(env, acct, user, "Buffer access has lapsed. Sign in again.");
+  const made = madeFor(user, p);
   const people = (await getJSON(env, `n:${acct}:${p.id}`))?.p || 0;
-  const title = `${net(p.service)}, ${people} ${people === 1 ? "person" : "people"}, ${day(p.sentAt)}`;
+  const title = made ? (made.title || made.angle || p.title).slice(0, 60)
+    : `${net(p.service)}, ${people} ${people === 1 ? "person" : "people"}, ${day(p.sentAt)}`;
   const link = linkIn(p.text);
   const body = link ? p.text.split(link).join("{{link}}") : p.text;
   const t = await gql(token, `mutation($i:CreatePostTemplateInput!){ createPostTemplate(input:$i){
@@ -368,20 +393,24 @@ async function keep(req, env, { acct, user }) {
   const templateId = t.data?.createPostTemplate?.postTemplate?.id;
   if (!templateId) return done(env, acct, user, `Buffer didn't make the template: ${failText(t, "createPostTemplate")}`);
   const words = p.title.replace(/[^\p{L}\p{N} ]/gu, "").split(/\s+/).slice(0, 4).join(" ").slice(0, 30);
-  let tag, tagName;
-  for (const suffix of ["", ` ${shortId(p.id).slice(-4)}`]) {
+  let tag, tagName, tagId = made?.tagId;
+  if (made) tagName = `Dailies: ${made.angle}`.slice(0, 40);
+  else for (const suffix of ["", ` ${shortId(p.id).slice(-4)}`]) {
     tagName = `Dailies: ${words}${suffix}`;
     tag = await gql(token, `mutation($o:OrganizationId!,$n:String!){ createTag(input:{organizationId:$o, tag:{name:$n, color:"#e8b830"}}){
       __typename ... on TagActionSuccess { tag { id } } ... on InvalidInputError { message } ... on DuplicateError { message } ... on UnauthorizedError { message } ... on UnexpectedError { message } } }`, { o: user.orgId, n: tagName });
     if (tag.data?.createTag?.__typename !== "DuplicateError") break;
   }
-  const tagId = tag.data?.createTag?.tag?.id;
+  tagId ||= tag.data?.createTag?.tag?.id;
   if (!tagId) {
     await gql(token, "mutation($i:PostTemplateId!){ deletePostTemplate(input:{id:$i}){ __typename } }", { i: templateId });
     return done(env, acct, user, `Buffer didn't make the tag: ${failText(tag, "createTag")}`);
   }
-  (user.kept ||= []).push({ post: p.id, templateId, tagId, tagName, title, at: new Date().toISOString(), drafts: [] });
-  return done(env, acct, user, `Kept. Buffer now has a template "${title}" and a tag "${tagName}".`);
+  const like = made ? { angle: made.angle, hook: made.hook, lines: made.lines, caption: made.caption, link: made.link }
+    : { angle: "", hook: p.title, lines: [], caption: p.text.slice(0, 500), link: p.found || "" };
+  (user.kept ||= []).push({ post: p.id, templateId, tagId, tagName, ownTag: !made, title, like, at: new Date().toISOString(), drafts: [] });
+  return done(env, acct, user, made ? `Kept. Buffer now has a template "${title}", and its posts keep the tag "${tagName}".`
+    : `Kept. Buffer now has a template "${title}" and a tag "${tagName}".`);
 }
 
 // One draft per channel the post hasn't run on, with each network's required fields.
@@ -428,10 +457,10 @@ async function forget(req, env, { acct, user }) {
   const token = await accessToken(env, acct);
   if (token) await Promise.all([
     gql(token, "mutation($i:PostTemplateId!){ deletePostTemplate(input:{id:$i}){ __typename } }", { i: k.templateId }),
-    gql(token, "mutation($i:TagId!){ deleteTag(input:{id:$i}){ __typename } }", { i: k.tagId }),
+    k.ownTag !== false && gql(token, "mutation($i:TagId!){ deleteTag(input:{id:$i}){ __typename } }", { i: k.tagId }),
   ]);
   user.kept = user.kept.filter(x => x !== k);
-  return done(env, acct, user, token ? `Forgot "${k.title}", and deleted its template and tag in Buffer.` : `Forgot "${k.title}". Buffer access has lapsed, so its template and tag are still in Buffer.`);
+  return done(env, acct, user, token ? `Forgot "${k.title}", and deleted its template${k.ownTag !== false ? " and tag" : ""} in Buffer.` : `Forgot "${k.title}". Buffer access has lapsed, so its template and tag are still in Buffer.`);
 }
 
 const safeUrl = s => { try { const u = new URL(s.trim()); return /^https?:$/.test(u.protocol) ? u.toString() : ""; } catch { return ""; } };
@@ -459,7 +488,7 @@ async function makeKey(req, env, { acct, user }) {
 <p>In your project's folder, run this once:</p>
 <pre style="white-space:pre-wrap;word-break:break-all"><code>${esc(cmd)}</code></pre>
 <p class="note">Then ask Claude Code, after you ship something, to "make a build video with Dailies". It sends what changed (and screenshots or the live link if you like), and gets back a review link to this account. Anyone with the key can make scripts and text drafts here, never posts. Lost it? Make a new one; the old one stops working.</p>
-<p><a href="/me">Back to your posts</a></p>`, { headers: { "cache-control": "no-store" } });
+<p><a href="/me">Back</a></p>`, { headers: { "cache-control": "no-store" } });
 }
 
 async function disconnect(env, { acct, user }) {

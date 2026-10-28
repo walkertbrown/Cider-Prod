@@ -40,7 +40,7 @@ No keys or secrets here. Everything below is also in git unless noted.
 
 ## Next
 1. Check mail/in. Check Stripe for a first $9 Comic Cover sale.
-2. Keep this / Post it again on the studio screens (the known gap). Then
+2. (done 28 Oct: Keep this / Post it again / Make more like this on /me) (the known gap). Then
    step 6 (11–13 Nov): polish, write-up, demo video, submit.
 3. Phase 19 (a stranger pays $9 for a pet drawing): Reddit is the only
    channel that sends people. Bobo question to the boss still open.

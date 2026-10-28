@@ -234,3 +234,25 @@ music-video editor, so it's **Dailies**: the short cuts you make every day.
   already set up breaks.
 - The Buffer app's own name (on Buffer's sign-in screen) is the boss's to
   change in Buffer's app settings.
+
+## Keep this / Post it again, in the studio (28 Oct)
+Buffer won't tell us which posts did well, but the owner can see it in
+Buffer's own analytics. So the owner chooses the winner, and Dailies does
+the rest. (The boss, 21 Oct: "the post it again also stored like a
+template, matching the posts the worked".)
+- **Remember what was made.** Each draft from /make records its video's
+  tag, angle, title, caption, hook, on-screen lines and link (`user.made`,
+  newest 100). The record outlasts the 30-day video file.
+- **/me is the Dailies home now.** At the top is "Made with Dailies": each
+  video and the networks it went out on (sent posts carrying its tag).
+  "Keep this" on one that worked makes a Buffer template and keeps its
+  existing tag, so every network it ran on counts. The bio link and counts
+  move into a closed section below.
+- **Kept, three ways to use it.**
+  - "Post it again" drafts it on the connected networks it hasn't run on
+    (already built).
+  - "Make more like this" opens /make with its link read. New scripts
+    follow what worked (the hook's pattern, length, tone and call to
+    action) and take new angles, without repeating its lines. One script
+    run.
+  - The Buffer template, for writing by hand.

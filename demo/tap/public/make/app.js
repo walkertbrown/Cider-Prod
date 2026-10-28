@@ -46,7 +46,7 @@ $("readForm").onsubmit = async e => {
 $("writeBtn").onclick = async () => {
   $("writeBtn").disabled = true; $("writeStatus").textContent = "Writing scripts… (about 10–30 seconds)"; $("writeStatus").className = "status small";
   try {
-    const out = await call("/api/scripts", { page, count: +$("count").value });
+    const out = await call("/api/scripts", { page, count: +$("count").value, like });
     $("writeStatus").textContent = out.note && out.videos.length < +$("count").value ? out.note : "";
     cards.length = 0;
     $("videos").replaceChildren(...out.videos.map(videoCard));
@@ -301,7 +301,9 @@ async function upload(state) {
 
 async function draft(state, chosen) {
   const id = await upload(state);
-  const { results } = await call("/api/draft", { video: id, channels: chosen, caption: state.v.caption, title: state.v.title, hashtags: state.v.hashtags, angle: state.v.angle });
+  const v = state.v, lines = (v.scenes || []).map(x => x.text);
+  const { results } = await call("/api/draft", { video: id, channels: chosen, caption: v.caption, title: v.title, hashtags: v.hashtags, angle: v.angle,
+    hook: v.hook || lines[0] || "", lines, link: v.scenes ? pg(v)?.url || "" : "" });
   return results;
 }
 
@@ -520,6 +522,23 @@ async function render(canvas, v, progress) {
 
 // Shared with clips.js (long video to clips).
 export { $, el, call, cards, allBox, showDraft, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, W, H, FPS };
+
+// ---- Make more like this (/make/?like=<kept post>): read its link, and write in its manner ----
+
+let like = null;
+const likeId = new URLSearchParams(location.search).get("like");
+if (likeId) {
+  $("readStatus").textContent = "Loading the post you kept…";
+  call(`/api/like?id=${encodeURIComponent(likeId)}`, null, "GET").then(out => {
+    like = out;
+    $("likeNote").textContent = `Making more like “${out.title}”: new angles, in the manner that worked. `;
+    $("likeNote").append(el("a", { href: "/make/", textContent: "Start fresh instead" }));
+    $("likeNote").hidden = false;
+    $("url").value = out.link;
+    $("readStatus").textContent = "";
+    if (out.link) $("readForm").requestSubmit();
+  }).catch(err => { $("readStatus").textContent = err.message; $("readStatus").className = "status small bad"; });
+}
 
 // ---- A review link from Claude Code (/make/?job=<id>): the scripts are already written ----
 
