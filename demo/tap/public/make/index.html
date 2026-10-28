@@ -63,6 +63,15 @@ label.ch{display:inline-flex;gap:6px;align-items:center;margin:4px 12px 4px 0}
 </section>
 
 <section id="videos"></section>
+<div class="card" id="allBox" hidden>
+  <strong>All videos</strong>
+  <p class="small muted" id="allMade" style="margin:4px 0"></p>
+  <div class="row"><button class="primary" id="renderAll">Render all</button></div>
+  <p class="small" style="margin:10px 0 4px">Draft every rendered video to:</p>
+  <div id="allTicks"></div>
+  <div class="row"><button class="primary" id="draftAll" disabled>Draft all to Buffer</button></div>
+  <div class="status small" id="allOut"></div>
+</div>
 
 <p class="small muted" style="margin-top:40px">Videos are encoded in your browser (Chrome, Edge or recent Safari). A video you upload is kept at Tap for 30 days so Buffer can fetch it, then deleted. <a href="/privacy">Privacy</a>.</p>
 </main>

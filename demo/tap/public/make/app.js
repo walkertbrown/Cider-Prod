@@ -6,6 +6,12 @@ const $ = id => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
 const img = u => `/api/img?u=${encodeURIComponent(u)}`;
 
+call.raw = async (path, body) => {
+  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Tap answered ${r.status}.`);
+  return r.arrayBuffer();
+};
+
 async function call(path, body, method = "POST") {
   const r = await fetch(path, { method, headers: { "content-type": "application/json" }, body: body && JSON.stringify(body) });
   const d = await r.json().catch(() => ({ error: `Tap answered ${r.status}.` }));
@@ -40,6 +46,7 @@ $("writeBtn").onclick = async () => {
     $("writeStatus").textContent = out.note && out.videos.length < +$("count").value ? out.note : "";
     cards.length = 0;
     $("videos").replaceChildren(...out.videos.map(videoCard));
+    $("allTicks").replaceChildren(); $("allOut").replaceChildren(); allBox();
   } catch (err) { $("writeStatus").textContent = err.message; $("writeStatus").className = "status small bad"; }
   $("writeBtn").disabled = false;
 };
@@ -65,31 +72,41 @@ function videoCard(v, n) {
   const renderBtn = el("button", { className: "primary", textContent: "Render" });
   const draftBox = el("div", { hidden: true });
   const music = musicControls(v);
-  cards.push({ v, music });
+  const voice = el("select", { style: "width:auto", onchange() { v.voice = this.value; } },
+    el("option", { value: "", textContent: "No voiceover" }),
+    ...[["coral", "Coral (warm)"], ["nova", "Nova (bright)"], ["sage", "Sage (calm)"], ["ash", "Ash (low)"], ["onyx", "Onyx (deep)"], ["verse", "Verse (lively)"]]
+      .map(([value, textContent]) => el("option", { value, textContent })));
+  const state = { v, music, mp4: null, uploaded: null };
+  cards.push(state);
   const side = el("div", {}, canvas, status, el("div", { className: "row" }, renderBtn), draftBox);
   const card = el("div", { className: "card" },
     el("div", { className: "small muted", textContent: `Video ${n + 1}: ${v.angle}` }),
     el("div", { className: "video" },
       el("div", {}, scenes, el("label", { className: "small muted", textContent: "Title (YouTube, TikTok)" }), title,
-        el("label", { className: "small muted", textContent: "Caption" }), caption, music.box),
+        el("label", { className: "small muted", textContent: "Caption" }), caption,
+        el("label", { className: "small muted", style: "display:block;margin-top:10px", textContent: "Voiceover (reads each line aloud; scenes stretch to fit)" }), voice, music.box),
       side));
   drawStill(canvas, v);
 
-  renderBtn.onclick = async () => {
+  state.render = async () => {
     renderBtn.disabled = true; status.className = "status small";
     try {
+      state.mp4 = null; state.uploaded = null;
       side.querySelector("video")?.remove(); canvas.hidden = false; draftBox.replaceChildren(); draftBox.hidden = true;
-      const mp4 = await render(canvas, v, p => status.textContent = `Rendering… ${Math.round(p * 100)}%`);
+      const mp4 = await render(canvas, v, (p, msg) => status.textContent = msg || `Rendering… ${Math.round(p * 100)}%`);
       const video = el("video", { src: URL.createObjectURL(mp4), controls: true, playsInline: true });
       canvas.hidden = true; canvas.after(video);
       const notes = [mp4.vp9 && "VP9 (this browser can't make H.264; some networks may refuse it, and Chrome makes H.264)", mp4.opus && "music as Opus (this browser can't make AAC; some networks may refuse it)"].filter(Boolean);
       status.textContent = `${(mp4.size / 1048576).toFixed(1)} MB${notes.length ? ", " + notes.join(", ") : ""}. `;
       status.append(el("a", { href: video.src, download: `tap-video-${n + 1}.mp4`, textContent: "Download" }));
-      await showDraft(draftBox, v, mp4);
+      state.mp4 = mp4;
+      await showDraft(draftBox, state);
       renderBtn.textContent = "Render again";
     } catch (err) { status.textContent = err.message; status.className = "status small bad"; }
     renderBtn.disabled = false;
+    allBox();
   };
+  renderBtn.onclick = () => state.render();
   return card;
 }
 
@@ -129,15 +146,30 @@ function musicControls(v) {
   return { box, set };
 }
 
-// The song from its start point, cut to the video's length, faded in and out, as 48 kHz stereo.
-async function mixAudio(m, seconds) {
+// Each scene's line read aloud, fetched once per (voice, text).
+const spoken = new Map();
+function speak(voice, text) {
+  const k = voice + "\n" + text;
+  if (!spoken.has(k)) spoken.set(k, call.raw("/api/voice", { voice, text }).then(b => audioCtx().decodeAudioData(b)).catch(e => { spoken.delete(k); throw e; }));
+  return spoken.get(k);
+}
+
+// The voice lines placed at their scenes, and the song from its start point under them
+// (lower while there's a voice), cut to the video's length, faded in and out, 48 kHz stereo.
+async function mixAudio(m, seconds, lines = []) {
   const rate = 48000, ctx = new OfflineAudioContext(2, Math.ceil(seconds * rate), rate);
-  const src = ctx.createBufferSource(); src.buffer = m.buffer;
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(m.volume, 0.3);
-  g.gain.setValueAtTime(m.volume, Math.max(0.3, seconds - 1.5)); g.gain.linearRampToValueAtTime(0, seconds);
-  src.connect(g).connect(ctx.destination);
-  src.start(0, Math.min(m.start, Math.max(0, m.buffer.duration - 1)));
+  if (m) {
+    const vol = m.volume * (lines.length ? 0.3 : 1);
+    const src = ctx.createBufferSource(); src.buffer = m.buffer;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(vol, 0.3);
+    g.gain.setValueAtTime(vol, Math.max(0.3, seconds - 1.5)); g.gain.linearRampToValueAtTime(0, seconds);
+    src.connect(g).connect(ctx.destination);
+    src.start(0, Math.min(m.start, Math.max(0, m.buffer.duration - 1)));
+  }
+  for (const { buffer, at } of lines) {
+    const src = ctx.createBufferSource(); src.buffer = buffer; src.connect(ctx.destination); src.start(at);
+  }
   return ctx.startRendering();
 }
 
@@ -166,7 +198,21 @@ async function encodeAudio(muxer, audio, config) {
   if (failed) throw failed;
 }
 
-async function showDraft(box, v, mp4) {
+async function upload(state) {
+  if (state.uploaded) return state.uploaded;
+  const r = await fetch("/api/upload", { method: "PUT", headers: { "content-type": "video/mp4" }, body: state.mp4 });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `Upload failed (${r.status}).`);
+  return state.uploaded = d.id;
+}
+
+async function draft(state, chosen) {
+  const id = await upload(state);
+  const { results } = await call("/api/draft", { video: id, channels: chosen, caption: state.v.caption, title: state.v.title });
+  return results;
+}
+
+async function showDraft(box, state) {
   channels ??= (await call("/api/channels", null, "GET")).channels;
   if (!channels.length) { box.append(el("p", { className: "small muted", textContent: "No Buffer channels that take video are connected." })); box.hidden = false; return; }
   const ticks = channels.map(c => el("input", { type: "checkbox", value: c.id, checked: ["instagram", "tiktok", "youtube"].includes(c.service) }));
@@ -175,26 +221,56 @@ async function showDraft(box, v, mp4) {
   box.append(el("p", { className: "small", style: "margin:10px 0 4px", textContent: "Draft it to:" }),
     ...channels.map((c, i) => el("label", { className: "ch" }, ticks[i], c.service)), el("div", { className: "row" }, btn), out);
   box.hidden = false;
-  let uploaded = null;
   btn.onclick = async () => {
     const chosen = ticks.filter(t => t.checked).map(t => t.value);
     if (!chosen.length) { out.textContent = "Pick at least one channel."; return; }
-    btn.disabled = true; out.className = "status small";
+    btn.disabled = true; out.className = "status small"; out.textContent = "Uploading and drafting…";
     try {
-      if (!uploaded) {
-        out.textContent = "Uploading…";
-        const r = await fetch("/api/upload", { method: "PUT", headers: { "content-type": "video/mp4" }, body: mp4 });
-        const d = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(d.error || `Upload failed (${r.status}).`);
-        uploaded = d.id;
-      }
-      out.textContent = "Drafting…";
-      const { results } = await call("/api/draft", { video: uploaded, channels: chosen, caption: v.caption, title: v.title });
+      const results = await draft(state, chosen);
       out.replaceChildren(...results.map(r => el("div", { className: r.ok ? "" : "bad", textContent: r.ok ? `${r.channel}: in your Buffer drafts` : `${r.channel}: ${r.error}` })));
       if (results.some(r => !r.ok)) btn.disabled = false;
     } catch (err) { out.textContent = err.message; out.className = "status small bad"; btn.disabled = false; }
   };
 }
+
+// ---- All videos at once ------------------------------------------------------
+
+async function allBox() {
+  const box = $("allBox");
+  if (cards.length < 2) { box.hidden = true; return; }
+  box.hidden = false;
+  const made = cards.filter(c => c.mp4).length;
+  $("allMade").textContent = `${made} of ${cards.length} rendered.`;
+  $("draftAll").disabled = !made;
+  if (made && !$("allTicks").children.length) {
+    channels ??= (await call("/api/channels", null, "GET")).channels;
+    $("allTicks").replaceChildren(...channels.map(c => el("label", { className: "ch" },
+      el("input", { type: "checkbox", value: c.id, checked: ["instagram", "tiktok", "youtube"].includes(c.service) }), c.service)));
+  }
+}
+
+$("renderAll").onclick = async () => {
+  $("renderAll").disabled = true;
+  for (const c of cards) if (!c.mp4) await c.render();
+  $("renderAll").disabled = false;
+};
+
+$("draftAll").onclick = async () => {
+  const chosen = [...$("allTicks").querySelectorAll("input:checked")].map(t => t.value);
+  const out = $("allOut");
+  if (!chosen.length) { out.textContent = "Pick at least one channel."; return; }
+  $("draftAll").disabled = true; out.className = "status small"; out.replaceChildren();
+  for (const [i, c] of cards.entries()) {
+    if (!c.mp4) continue;
+    const line = el("div", { textContent: `Video ${i + 1}: uploading and drafting…` }); out.append(line);
+    try {
+      const results = await draft(c, chosen);
+      line.textContent = `Video ${i + 1}: ` + results.map(r => r.ok ? `${r.channel} drafted` : `${r.channel} failed (${r.error})`).join(", ");
+      if (results.some(r => !r.ok)) line.className = "bad";
+    } catch (err) { line.textContent = `Video ${i + 1}: ${err.message}`; line.className = "bad"; }
+  }
+  $("draftAll").disabled = false;
+};
 
 // ---- Rendering -------------------------------------------------------------
 
@@ -314,8 +390,16 @@ async function render(canvas, v, progress) {
   const { config, mux } = await pickCodec();
   const ctx = canvas.getContext("2d");
   const bmps = await Promise.all(v.scenes.map(s => bitmap(s.image)));
+  let voices = [];
+  if (v.voice) {
+    progress(0, "Recording the voiceover…");
+    voices = await Promise.all(v.scenes.map(s => s.text.trim() ? speak(v.voice, s.text.trim()) : null));
+    // A scene lasts at least as long as its line, with a breath either side.
+    v = { ...v, scenes: v.scenes.map((s, i) => ({ ...s, seconds: Math.max(s.seconds, voices[i] ? voices[i].duration + 0.5 : 0) })) };
+  }
   const tl = timeline(v), frames = Math.round(tl.total * FPS);
-  const sound = v.music && { ...(await pickAudioCodec()), audio: await mixAudio(v.music, frames / FPS) };
+  const lines = voices.map((b, i) => b && { buffer: b, at: tl.parts[i].from + 0.2 }).filter(Boolean);
+  const sound = (v.music || lines.length) && { ...(await pickAudioCodec()), audio: await mixAudio(v.music, frames / FPS, lines) };
   const target = new ArrayBufferTarget();
   const muxer = new Muxer({ target, video: { codec: mux, width: W, height: H, frameRate: FPS },
     ...(sound && { audio: { codec: sound.mux, sampleRate: 48000, numberOfChannels: 2 } }), fastStart: "in-memory" });

@@ -121,3 +121,14 @@ Tap's bio page and counted links stay live, as an extra and not the pitch.
   /v/<id>.mp4. Kept 30 days.
 - Draft: one createPost per channel the user ticks, using the network
   fields already proven.
+
+## Step 2 details (started 28 Oct)
+Already in place: several videos per link (1–10), several links, and music.
+- **Voiceover.** Each scene line is read by gpt-4o-mini-tts, one call per
+  line, so the voice lines up with its scene. A scene stretches to fit its
+  line. Voice choice per video. The music dips under the voice. Caps: 150
+  lines a day per account and 1,500 overall, separate from script runs.
+- **All at once.** "Render all", then one channel choice and "Draft all".
+  Each video is drafted with its own caption and title.
+- Later in step 2: captions per network, and a tag per video so Keep this
+  can find the winners.

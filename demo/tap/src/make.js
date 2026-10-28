@@ -2,6 +2,7 @@
 // renders, and draft them into Buffer.
 //   POST /api/read     {urls} (1–5) → the pages' titles, text, images, and a suggested count
 //   POST /api/scripts  {page, count} → video scripts (language model, capped)
+//   POST /api/voice    {text, voice} → MP3 of one line read aloud (text-to-speech, capped)
 //   GET  /api/img?u=   an image from the page, re-served so the canvas can encode it
 //   PUT  /api/upload   an MP4 from the browser → {id, url}
 //   GET  /api/channels the account's Buffer channels
@@ -9,7 +10,9 @@
 //   GET  /v/<id>.mp4   the hosted video, public, for Buffer to fetch (with ranges)
 
 const SCRIPT_MODEL = "gpt-5.4-mini";
-const PER_ACCOUNT_DAY = 20, ALL_DAY = 200;
+const CAPS = { script: [20, 200], voice: [150, 1500] }; // a day: per account, overall
+const VOICE_MODEL = "gpt-4o-mini-tts";
+const VOICES = new Set(["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"]);
 const VIDEO_TTL = 30 * 86400, VIDEO_MAX = 25 * 1024 * 1024;
 const VIDEO_NETS = new Set(["instagram", "tiktok", "youtube", "facebook", "linkedin", "twitter", "threads", "bluesky", "mastodon", "pinterest"]);
 
@@ -135,11 +138,12 @@ async function writeScripts(env, page, count) {
 }
 
 // One daily counter per account and one overall, in KV (approximate under races; fine as a cap).
-async function underCap(env, acct) {
-  const kA = `cap:${today()}:${acct}`, kAll = `cap:${today()}:all`;
+async function underCap(env, acct, kind) {
+  const [perAcct, overall] = CAPS[kind], tag = kind === "script" ? "" : kind + ":";
+  const kA = `cap:${tag}${today()}:${acct}`, kAll = `cap:${tag}${today()}:all`;
   const [a, all] = await Promise.all([env.TAP.get(kA), env.TAP.get(kAll)]);
-  if (+a >= PER_ACCOUNT_DAY) return `You've used today's ${PER_ACCOUNT_DAY} script runs. More tomorrow.`;
-  if (+all >= ALL_DAY) return "Tap has reached today's limit for everyone. More tomorrow.";
+  if (+a >= perAcct) return `You've used today's ${perAcct} ${kind === "script" ? "script runs" : "voiceover lines"}. More tomorrow.`;
+  if (+all >= overall) return "Tap has reached today's limit for everyone. More tomorrow.";
   await Promise.all([env.TAP.put(kA, String(+a + 1), { expirationTtl: 2 * 86400 }), env.TAP.put(kAll, String(+all + 1), { expirationTtl: 2 * 86400 })]);
   return "";
 }
@@ -191,10 +195,25 @@ export async function api(req, env, path, { acct, user }, d) {
   if (path === "/api/scripts" && req.method === "POST") {
     const { page, count } = await req.json().catch(() => ({}));
     if (!page?.text && !page?.description) return json({ error: "Read a page first." }, 400);
-    const capped = await underCap(env, acct);
+    const capped = await underCap(env, acct, "script");
     if (capped) return json({ error: capped }, 429);
     const out = await writeScripts(env, page, Math.max(1, Math.min(10, +count || 1)));
     return json(out, out.error ? 502 : 200);
+  }
+  if (path === "/api/voice" && req.method === "POST") {
+    const { text, voice } = await req.json().catch(() => ({}));
+    const line = String(text || "").trim().slice(0, 300);
+    if (!line) return json({ error: "Nothing to read." }, 400);
+    const capped = await underCap(env, acct, "voice");
+    if (capped) return json({ error: capped }, 429);
+    const r = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
+      body: JSON.stringify({ model: VOICE_MODEL, voice: VOICES.has(voice) ? voice : "coral", input: line, response_format: "mp3",
+        instructions: "A warm, upbeat narrator for a short social video. Natural pace, clear, never shouting." }),
+    });
+    if (!r.ok) return json({ error: `The voice service answered ${r.status}.` }, 502);
+    return new Response(r.body, { headers: { "content-type": "audio/mpeg", "cache-control": "no-store" } });
   }
   if (path === "/api/img" && req.method === "GET") {
     const u = safeHttp(url.searchParams.get("u"));
