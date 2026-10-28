@@ -67,6 +67,7 @@ function videoCard(v, n) {
   scenes.append(...v.scenes.map(sceneRow));
   const title = el("input", { type: "text", value: v.title, maxLength: 100, oninput() { v.title = this.value; } });
   const caption = el("textarea", { value: v.caption, rows: 3, oninput() { v.caption = this.value; } });
+  const hashtags = el("input", { type: "text", value: (v.hashtags || []).map(t => "#" + t).join(" "), oninput() { v.hashtags = this.value.split(/[\s,#]+/).filter(Boolean); } });
   const canvas = el("canvas", { width: W, height: H, className: "preview" });
   const status = el("p", { className: "status small" });
   const renderBtn = el("button", { className: "primary", textContent: "Render" });
@@ -84,6 +85,7 @@ function videoCard(v, n) {
     el("div", { className: "video" },
       el("div", {}, scenes, el("label", { className: "small muted", textContent: "Title (YouTube, TikTok)" }), title,
         el("label", { className: "small muted", textContent: "Caption" }), caption,
+        el("label", { className: "small muted", textContent: "Hashtags (each network gets as many as suit it)" }), hashtags,
         el("label", { className: "small muted", style: "display:block;margin-top:10px", textContent: "Voiceover (reads each line aloud; scenes stretch to fit)" }), voice, music.box),
       side));
   drawStill(canvas, v);
@@ -208,7 +210,7 @@ async function upload(state) {
 
 async function draft(state, chosen) {
   const id = await upload(state);
-  const { results } = await call("/api/draft", { video: id, channels: chosen, caption: state.v.caption, title: state.v.title });
+  const { results } = await call("/api/draft", { video: id, channels: chosen, caption: state.v.caption, title: state.v.title, hashtags: state.v.hashtags, angle: state.v.angle });
   return results;
 }
 

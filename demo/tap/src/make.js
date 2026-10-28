@@ -113,8 +113,9 @@ Rules:
 - The last scene is the call to action and names the site (the host given).
 - The text may come from several pages of one site: the first is the main page, the others are feature or detail pages. Use the feature pages for angles, and send people to the main site.
 - seconds per scene: 2.5 to 5, longer for longer lines.
-- caption: the post text for the networks, 1 to 3 short sentences plus the site address, at most 300 characters. title: at most 90 characters, for YouTube.
-Return JSON only: {"note": string, "videos": [{"angle": string, "title": string, "caption": string, "scenes": [{"text": string, "image": integer or null, "seconds": number}]}]}`;
+- Lines may also be read aloud by a narrator, so write them to sound natural spoken. In the last scene name the site the way a person says it (the host name, no "https", no slashes or paths).
+- caption: the post text for the networks, 1 to 3 short sentences plus the site address, at most 260 characters, no hashtags. title: at most 90 characters, for YouTube. hashtags: 3 to 6 relevant single words or CamelCase phrases, without "#".
+Return JSON only: {"note": string, "videos": [{"angle": string, "title": string, "caption": string, "hashtags": [string], "scenes": [{"text": string, "image": integer or null, "seconds": number}]}]}`;
 
 async function writeScripts(env, page, count) {
   const input = `Host: ${page.host}\nURL: ${page.url}\nTitle: ${page.title}\nDescription: ${page.description}\n` +
@@ -131,7 +132,7 @@ async function writeScripts(env, page, count) {
   let out; try { out = JSON.parse(d.choices[0].message.content); } catch { return { error: "The script writer returned something unreadable. Try again." }; }
   const n = page.images.length;
   out.videos = (out.videos || []).slice(0, 10).map(v => ({
-    angle: String(v.angle || ""), title: String(v.title || "").slice(0, 100), caption: String(v.caption || "").slice(0, 500),
+    angle: String(v.angle || ""), title: String(v.title || "").slice(0, 100), caption: String(v.caption || "").slice(0, 500), hashtags: cleanTags(v.hashtags),
     scenes: (v.scenes || []).slice(0, 8).map(s => ({ text: String(s.text || "").slice(0, 120), image: Number.isInteger(s.image) && s.image >= 0 && s.image < n ? s.image : null, seconds: Math.min(6, Math.max(2, +s.seconds || 3)) })),
   })).filter(v => v.scenes.length);
   return out;
@@ -149,6 +150,27 @@ async function underCap(env, acct, kind) {
 }
 
 // ---- Drafting --------------------------------------------------------------
+
+const cleanTags = list => [...new Set([].concat(list || []).map(t => String(t).replace(/[^\p{L}\p{N}_]/gu, "")).filter(Boolean))].slice(0, 8);
+
+// The post text each network gets: the caption, plus as many hashtags as suit it.
+export function captionFor(service, caption, hashtags) {
+  const tags = n => cleanTags(hashtags).slice(0, n).map(t => "#" + t).join(" ");
+  const fit = (text, max) => text.length <= max ? text : text.slice(0, max - 1).replace(/\s+\S*$/, "") + "…";
+  const c = caption.trim();
+  switch (service) {
+    case "instagram": return fit(`${c}\n\n${tags(5)}`.trim(), 2200);
+    case "tiktok": return fit(`${c} ${tags(4)}`.trim(), 2200);
+    case "youtube": return fit(`${c}\n\n${tags(3)} #Shorts`.trim(), 5000);
+    case "twitter": return fit(`${c} ${tags(1)}`.trim(), 280);
+    case "bluesky": return fit(c, 300);
+    case "threads": return fit(`${c} ${tags(1)}`.trim(), 500);
+    case "linkedin": case "facebook": return fit(`${c}\n\n${tags(3)}`.trim(), 3000);
+    default: return fit(c, 500);
+  }
+}
+
+const CREATE_TAG = `mutation($i:CreateTagInput!){ createTag(input:$i){ __typename ... on TagActionSuccess { tag { id } } } }`;
 
 export function postInput(ch, { text, video, title, category, tagIds = [] }) {
   const i = { channelId: ch.id, text, mode: "addToQueue", schedulingType: "automatic", saveToDraft: true, tagIds,
@@ -239,15 +261,22 @@ export async function api(req, env, path, { acct, user }, d) {
     return json({ channels: (user.channels || []).filter(c => VIDEO_NETS.has(c.service)) });
   }
   if (path === "/api/draft" && req.method === "POST") {
-    const { video, channels, caption, title } = await req.json().catch(() => ({}));
-    if (!(user.videos || []).some(v => v.id === video)) return json({ error: "Upload the video first." }, 400);
+    const { video, channels, caption, title, hashtags, angle } = await req.json().catch(() => ({}));
+    const kept = (user.videos || []).find(v => v.id === video);
+    if (!kept) return json({ error: "Upload the video first." }, 400);
     const chosen = (user.channels || []).filter(c => (channels || []).includes(c.id));
     if (!chosen.length) return json({ error: "Pick at least one channel." }, 400);
     const token = await d.accessToken(env, acct);
     if (!token) return json({ error: "Buffer access has lapsed. Sign in again." }, 401);
+    // One Buffer tag per video, so its posts can be found together later (Keep this).
+    if (!kept.tagId && angle) {
+      const t = await d.gql(token, CREATE_TAG, { i: { organizationId: user.orgId, tag: { name: `Tap: ${String(angle)}`.slice(0, 40), color: "#e8b830" } } });
+      if ((kept.tagId = t.data?.createTag?.tag?.id || "")) await d.putJSON(env, `user:${acct}`, user);
+    }
     const results = [];
     for (const ch of chosen) {
-      const r = await d.gql(token, CREATE_POST, { i: postInput(ch, { text: String(caption || "").slice(0, 2000), video: `${url.origin}/v/${video}.mp4`, title }) });
+      const text = captionFor(ch.service, String(caption || "").slice(0, 2000), hashtags);
+      const r = await d.gql(token, CREATE_POST, { i: postInput(ch, { text, video: `${url.origin}/v/${video}.mp4`, title, tagIds: kept.tagId ? [kept.tagId] : [] }) });
       const id = r.data?.createPost?.post?.id;
       results.push({ channel: ch.service, ok: !!id, error: id ? "" : (d.errText(r) || r.data?.createPost?.message || r.data?.createPost?.__typename || `HTTP ${r.status}`) });
     }
