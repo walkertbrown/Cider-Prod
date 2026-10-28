@@ -78,6 +78,20 @@ function description(entry) {
 }
 
 // Decode a track's samples that cover [from, to] seconds, starting at the key sample before `from`.
+// The decoder and its settings for a track, or a plain-words error if this browser can't read it.
+// iPhones record HEVC ("High Efficiency") by default, and some browsers can't decode it.
+async function decoderFor(t, kind) {
+  const Dec = kind === "video" ? VideoDecoder : AudioDecoder;
+  const config = kind === "video"
+    ? { codec: t.info.codec, codedWidth: t.info.video?.width || t.info.track_width, codedHeight: t.info.video?.height || t.info.track_height, description: description(t.entry) }
+    : { codec: t.info.codec.replace(/^mp4a\.40\.0*/, "mp4a.40."), sampleRate: t.info.audio.sample_rate, numberOfChannels: t.info.audio.channel_count, description: description(t.entry) };
+  if (!(await Dec.isConfigSupported(config).catch(() => ({}))).supported)
+    throw new Error(kind === "video" ? `This browser can't decode this video (${t.info.codec}). ${HEVC.test(t.info.codec) ? IPHONE : "Try Chrome, or export it as H.264."}` : `This browser can't decode this video's sound (${t.info.codec}).`);
+  return [Dec, config];
+}
+const HEVC = /^(hvc1|hev1)/;
+const IPHONE = "It's HEVC, the iPhone's default. Try it in Safari, or in Chrome on a Mac or Windows PC. To record in a format that works everywhere: iPhone Settings → Camera → Formats → Most Compatible.";
+
 async function decode(t, kind, from, to, onOutput, between) {
   const ss = t.samples;
   let first = ss.findIndex(s => time(t, s) + s.duration / s.timescale > from);
@@ -87,12 +101,7 @@ async function decode(t, kind, from, to, onOutput, between) {
   let last = ss.length;
   for (let i = first; i < ss.length; i++) if (time(t, ss[i]) > to + (kind === "video" ? 1 : 0.1)) { last = i; break; }
   let failed = null;
-  const Dec = kind === "video" ? VideoDecoder : AudioDecoder;
-  const config = kind === "video"
-    ? { codec: t.info.codec, codedWidth: t.info.video?.width || t.info.track_width, codedHeight: t.info.video?.height || t.info.track_height, description: description(t.entry) }
-    : { codec: t.info.codec.replace(/^mp4a\.40\.0*/, "mp4a.40."), sampleRate: t.info.audio.sample_rate, numberOfChannels: t.info.audio.channel_count, description: description(t.entry) };
-  if (!(await Dec.isConfigSupported(config).catch(() => ({}))).supported)
-    throw new Error(kind === "video" ? `This browser can't decode this video (${t.info.codec}). Try Chrome, or export it as H.264.` : `This browser can't decode this video's sound (${t.info.codec}).`);
+  const [Dec, config] = await decoderFor(t, kind);
   const dec = new Dec({ output: onOutput, error: e => failed = e });
   dec.configure(config);
   const Chunk = kind === "video" ? EncodedVideoChunk : EncodedAudioChunk;
@@ -281,6 +290,7 @@ $("clipFile").onchange = async () => {
   try {
     if (!("VideoDecoder" in window)) throw new Error("This browser can't cut video. Use Chrome or Edge.");
     src = await open(f);
+    await decoderFor(src.video, "video").catch(e => { src = null; throw e; });
     if (src.duration > MAX_MINUTES * 60) { const m = Math.round(src.duration / 60); src = null; throw new Error(`Up to ${MAX_MINUTES} minutes for now. This one is ${m}.`); }
     const up = src.rot % 180 ? [src.height, src.width] : [src.width, src.height];
     $("clipInfo").textContent = `${mmss(src.duration)} · ${up[0]}×${up[1]} · ${src.video.info.codec}${src.audio ? "" : " · no sound"}`;
