@@ -10,10 +10,14 @@
 //   POST /api/draft    {video, channels, caption, title} → one Buffer draft per channel
 //   POST /api/plan     {page, start, weeks, perWeek} → dated items for the connected networks (capped)
 //   POST /api/ideas    {items} → one Buffer Idea per item (Buffer has no API to delete ideas)
+//   POST /api/transcribe  a 16 kHz mono WAV piece of a long video's sound → timed words (speech-to-text, capped by minutes)
+//   POST /api/moments  {segments, duration, count} → the best stand-alone clips in a long video (capped)
 //   GET  /v/<id>.mp4   the hosted video, public, for Buffer to fetch (with ranges)
 
 const SCRIPT_MODEL = "gpt-5.4-mini";
-const CAPS = { script: [20, 200], voice: [150, 1500] }; // a day: per account, overall
+const CAPS = { script: [20, 200], voice: [150, 1500], minutes: [60, 600] }; // a day: per account, overall
+const CAP_WORDS = { script: "script runs", voice: "voiceover lines", minutes: "minutes of transcription" };
+const WAV_MAX = 20 * 1024 * 1024; // 16 kHz mono 16-bit: about 10 minutes, under the speech-to-text limit of 25 MB
 const VOICE_MODEL = "gpt-4o-mini-tts";
 const VOICES = new Set(["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"]);
 const VIDEO_TTL = 30 * 86400, VIDEO_MAX = 25 * 1024 * 1024;
@@ -203,14 +207,62 @@ async function writePlan(env, page, dates, nets) {
 const CREATE_IDEA = `mutation($i:CreateIdeaInput!){ createIdea(input:$i){ __typename ... on Idea { id } ... on InvalidInputError { message } ... on UnauthorizedError { message } ... on UnexpectedError { message } ... on LimitReachedError { message } } }`;
 
 // One daily counter per account and one overall, in KV (approximate under races; fine as a cap).
-export async function underCap(env, acct, kind) {
+export async function underCap(env, acct, kind, n = 1) {
   const [perAcct, overall] = CAPS[kind], tag = kind === "script" ? "" : kind + ":";
   const kA = `cap:${tag}${today()}:${acct}`, kAll = `cap:${tag}${today()}:all`;
   const [a, all] = await Promise.all([env.TAP.get(kA), env.TAP.get(kAll)]);
-  if (+a >= perAcct) return `You've used today's ${perAcct} ${kind === "script" ? "script runs" : "voiceover lines"}. More tomorrow.`;
-  if (+all >= overall) return "Tap has reached today's limit for everyone. More tomorrow.";
-  await Promise.all([env.TAP.put(kA, String(+a + 1), { expirationTtl: 2 * 86400 }), env.TAP.put(kAll, String(+all + 1), { expirationTtl: 2 * 86400 })]);
+  if (+a + n > perAcct) return +a >= perAcct ? `You've used today's ${perAcct} ${CAP_WORDS[kind]}. More tomorrow.` : `That needs ${n} ${CAP_WORDS[kind]} and ${perAcct - +a} are left today.`;
+  if (+all + n > overall) return "Tap has reached today's limit for everyone. More tomorrow.";
+  await Promise.all([env.TAP.put(kA, String(+a + n), { expirationTtl: 2 * 86400 }), env.TAP.put(kAll, String(+all + n), { expirationTtl: 2 * 86400 })]);
   return "";
+}
+
+// ---- Long video to clips: the browser sends the sound in pieces, then the timed sentences ----
+
+const MOMENT_RULES = `You pick the best moments in a long video to cut into short vertical clips. You get the transcript as timed sentences [start-end seconds] and how many clips to pick.
+Rules:
+- Each clip is one stand-alone moment: it makes sense without the rest of the video, starts at the start of a sentence and ends at the end of one. Prefer a strong first line (a claim, a question, a number, a surprise).
+- Each clip is 20 to 45 seconds long if possible, never under 12 or over 60. Clips never overlap. Use the exact sentence start and end times given.
+- Fewer clips than asked is fine if the video doesn't have that many good moments.
+- "title" is a short headline for the clip (under 60 characters). "caption" is the post text (one or two sentences, no hashtags). "hashtags" is 3 to 5 tags without #. Use only what is said; never invent facts.
+Return JSON: {"clips":[{"start":0.0,"end":0.0,"title":"...","caption":"...","hashtags":["..."]}]}`;
+
+async function transcribe(env, wav) {
+  const form = new FormData();
+  form.append("file", new Blob([wav], { type: "audio/wav" }), "audio.wav");
+  form.append("model", "whisper-1");
+  form.append("response_format", "verbose_json");
+  form.append("timestamp_granularities[]", "word");
+  form.append("timestamp_granularities[]", "segment");
+  const r = await fetch("https://api.openai.com/v1/audio/transcriptions", { method: "POST", headers: { authorization: `Bearer ${env.OPENAI_API_KEY}` }, body: form });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) return { error: d.error?.message || `The speech-to-text service answered ${r.status}.` };
+  const t = x => Math.round(x * 100) / 100;
+  return { duration: +d.duration || 0, language: d.language || "",
+    words: (d.words || []).map(w => ({ w: String(w.word), s: t(w.start), e: t(w.end) })),
+    segments: (d.segments || []).map(g => ({ s: t(g.start), e: t(g.end), t: String(g.text).trim() })) };
+}
+
+async function pickMoments(env, segments, duration, count) {
+  const input = `Video length: ${Math.round(duration)} seconds. Pick up to ${count} clip${count === 1 ? "" : "s"}.\n\nTranscript:\n` +
+    segments.map(g => `[${g.s.toFixed(1)}-${g.e.toFixed(1)}] ${g.t}`).join("\n").slice(0, 60000);
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    body: JSON.stringify({ model: SCRIPT_MODEL, response_format: { type: "json_object" }, reasoning_effort: "low",
+      messages: [{ role: "system", content: MOMENT_RULES }, { role: "user", content: input }] }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) return { error: d.error?.message || `The clip picker answered ${r.status}.` };
+  let out; try { out = JSON.parse(d.choices[0].message.content); } catch { return { error: "The clip picker returned something unreadable. Try again." }; }
+  const clips = [];
+  for (const c of (out.clips || []).map(c => ({ start: Math.max(0, +c.start || 0), end: Math.min(duration, +c.end || 0), title: String(c.title || "").slice(0, 100),
+    caption: String(c.caption || "").slice(0, 500), hashtags: cleanTags(c.hashtags) })).sort((a, b) => a.start - b.start)) {
+    if (c.end - c.start < 5 || c.end - c.start > 90) continue;
+    if (clips.length && c.start < clips.at(-1).end) continue;
+    clips.push(c);
+  }
+  return { clips: clips.slice(0, count) };
 }
 
 // ---- Drafting --------------------------------------------------------------
@@ -265,6 +317,7 @@ export async function serveVideo(env, req, id) {
   return new Response(req.method === "HEAD" ? null : value, { headers: { ...headers, "content-length": String(size) } });
 }
 
+
 export async function api(req, env, path, { acct, user }, d) {
   const url = new URL(req.url);
   if (path === "/api/read" && req.method === "POST") {
@@ -291,6 +344,26 @@ export async function api(req, env, path, { acct, user }, d) {
     const { angle } = body;
     const extra = (page.build ? BUILD_VOICE : "") + (angle ? `\n\nWrite this one for a planned post. Its angle: ${String(angle.angle || "").slice(0, 80)}. Its hook: ${String(angle.hook || "").slice(0, 140)}. What it covers: ${String(angle.notes || "").slice(0, 400)}` : "");
     const out = await writeScripts(env, page, Math.max(1, Math.min(10, +count || 1)), extra);
+    return json(out, out.error ? 502 : 200);
+  }
+  if (path === "/api/transcribe" && req.method === "POST") {
+    const wav = await req.arrayBuffer();
+    const v = new DataView(wav);
+    if (wav.byteLength < 44 || v.getUint32(0) !== 0x52494646 || v.getUint32(8) !== 0x57415645) return json({ error: "Send the sound as WAV." }, 415);
+    if (wav.byteLength > WAV_MAX) return json({ error: "That piece is too long. Up to 10 minutes at a time." }, 413);
+    const minutes = Math.max(1, Math.ceil((wav.byteLength - 44) / (v.getUint32(28, true) || 32000) / 60));
+    const capped = await underCap(env, acct, "minutes", minutes);
+    if (capped) return json({ error: capped }, 429);
+    const out = await transcribe(env, wav);
+    return json(out, out.error ? 502 : 200);
+  }
+  if (path === "/api/moments" && req.method === "POST") {
+    const { segments, duration, count } = await req.json().catch(() => ({}));
+    const segs = (Array.isArray(segments) ? segments : []).slice(0, 3000).map(g => ({ s: +g.s || 0, e: +g.e || 0, t: String(g.t || "").slice(0, 400) })).filter(g => g.t);
+    if (!segs.length) return json({ error: "Nobody speaks in this video, so there's nothing to pick from." }, 400);
+    const capped = await underCap(env, acct, "script");
+    if (capped) return json({ error: capped }, 429);
+    const out = await pickMoments(env, segs, +duration || segs.at(-1).e, Math.max(1, Math.min(10, +count || 3)));
     return json(out, out.error ? 502 : 200);
   }
   if (path === "/api/voice" && req.method === "POST") {

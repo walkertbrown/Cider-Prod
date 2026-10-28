@@ -518,6 +518,9 @@ async function render(canvas, v, progress) {
   return blob;
 }
 
+// Shared with clips.js (long video to clips).
+export { $, el, call, cards, allBox, showDraft, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, W, H, FPS };
+
 // ---- A review link from Claude Code (/make/?job=<id>): the scripts are already written ----
 
 const job = new URLSearchParams(location.search).get("job");
