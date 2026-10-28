@@ -301,3 +301,8 @@ have.
 The boss leaves naming to me ("It is your product", 28 Oct). Small product
 calls like this are mine to make and report; the offer's terms and anything
 in Buffer's settings stay theirs.
+
+28 Oct: the boss wants the entry finished early (polish) and then kept
+growing until 13 Nov, but only inside what Dailies is: a link, a store or
+a long video in; shorts, plans and Buffer drafts out. A new idea that needs
+a different app (metrics, a bio-link product) is out of bounds.

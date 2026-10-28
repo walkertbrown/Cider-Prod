@@ -17,7 +17,10 @@ main{max-width:880px;margin:0 auto;padding:28px 16px 72px}
 h1{font-size:28px;line-height:1.15;margin:8px 0 12px}h2{font-size:19px;margin:28px 0 8px}
 a{color:inherit}.muted{color:var(--muted)}.small{font-size:14px}.bad{color:var(--bad)}
 input[type=url],input[type=text],textarea,select{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
-textarea{resize:vertical;min-height:2.6em}
+textarea{resize:vertical;min-height:2.6em;field-sizing:content}
+.starts{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.starts>.card{margin:14px 0 0}
+@media (max-width:640px){.starts{grid-template-columns:1fr;gap:0}}
+.pair{display:inline-flex;gap:6px;align-items:center}.status:empty{min-height:0}
 button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:inherit;border-radius:8px;padding:8px 16px;cursor:pointer}
 button.primary{background:var(--gold);border-color:var(--gold);color:#15140f}
 button:disabled{opacity:.5;cursor:default}
@@ -41,20 +44,22 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
 </style>
 </head>
 <body><main>
-<a href="/me">Dailies</a>
-<h1>Make shorts from a link</h1>
-<p class="muted">Paste a page, or a few: a product, an app, an article, a listing. Dailies reads it, writes short vertical videos from what's on it, renders them here in your browser, and puts them into Buffer as drafts. Nothing is posted until you post it.</p>
+<a href="/me">← Your shorts</a>
+<h1>Make shorts</h1>
+<p class="muted">Start from a link or a store, or from a long video. Dailies writes or finds the moments, renders vertical videos here in your browser, and puts them into Buffer as drafts. Nothing is posted until you post it.</p>
 
 <p class="card small" id="likeNote" hidden></p>
-<form id="readForm">
+<div class="starts">
+<form id="readForm" class="card">
+  <strong>From a link or a store</strong>
+  <p class="small muted" style="margin:4px 0 8px">A product, an app, an article, a listing, or a Shopify store.</p>
   <textarea id="url" rows="3" placeholder="https://your-site.com&#10;https://your-site.com/a-feature" required></textarea>
   <p class="small muted" style="margin:4px 0 8px">One link per line, up to 5. Put the main page first: the videos send people there. Feature pages give them more to talk about.</p>
   <button class="primary" id="readBtn">Read the pages</button>
 </form>
-<p class="status small" id="readStatus"></p>
-<details class="card" id="clipBox">
-  <summary><strong>Or cut a long video into clips</strong></summary>
-  <p class="small muted" style="margin:6px 0 8px">Pick a talk, a stream, a podcast or a demo (MP4 or MOV, up to 60 minutes). Dailies listens to it, picks the moments that stand on their own, and cuts each into a vertical clip with captions of the words spoken. The video stays on your device; only its sound is sent to be turned into text.</p>
+<div class="card" id="clipBox">
+  <strong>From a long video</strong>
+  <p class="small muted" style="margin:4px 0 8px">A talk, a stream, a podcast or a demo (MP4 or MOV, up to 60 minutes). Dailies finds the moments that stand on their own and cuts them into captioned vertical clips. The video stays on your device; only its sound is sent, to be turned into text.</p>
   <div class="row"><input type="file" id="clipFile" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" style="flex:1;min-width:220px"></div>
   <p class="small muted" id="clipInfo" style="margin:4px 0"></p>
   <div class="row">
@@ -63,7 +68,9 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
     <button class="primary" id="clipBtn" disabled>Find the clips</button>
   </div>
   <p class="status small" id="clipStatus"></p>
-</details>
+</div>
+</div>
+<p class="status small" id="readStatus"></p>
 
 <section id="pageBox" hidden>
   <div class="card">
@@ -96,9 +103,9 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
     <strong>Plan a month</strong>
     <p class="small muted" style="margin:4px 0 8px">Dailies lays out dated posts from this page for the networks you've connected in Buffer: videos for Instagram, TikTok and YouTube, text for the others. Write any video from it below, or save the plan into Buffer as Ideas.</p>
     <div class="row">
-      <label for="perWeek">Posts a week</label><select id="perWeek" style="width:auto"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>7</option></select>
-      <label for="weeks">Weeks</label><select id="weeks" style="width:auto"><option>1</option><option>2</option><option>3</option><option selected>4</option></select>
-      <label for="start">From</label><input type="date" id="start" style="width:auto">
+      <span class="pair"><label for="perWeek">Posts a week</label><select id="perWeek" style="width:auto"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>7</option></select></span>
+      <span class="pair"><label for="weeks">Weeks</label><select id="weeks" style="width:auto"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></span>
+      <span class="pair"><label for="start">From</label><input type="date" id="start" style="width:auto"></span>
       <button class="primary" id="planBtn">Lay out the plan</button>
     </div>
     <p class="status small" id="planStatus"></p>

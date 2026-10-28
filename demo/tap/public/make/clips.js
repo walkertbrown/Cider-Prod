@@ -189,7 +189,7 @@ function drawFrame(ctx, f, clip, t) {
     put(ctx, f, (W - w) / 2, H * 0.45 - h / 2, w, h);
     if (clip.title) {
       ctx.font = "800 76px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      const lines = wrap(ctx, clip.title, W - 140).slice(0, 3), top = H * 0.45 - h / 2 - 60 - (lines.length - 1) * 88;
+      const lines = wrap(ctx, clip.title, W - 140, true).slice(0, 3), top = H * 0.45 - h / 2 - 60 - (lines.length - 1) * 88;
       lines.forEach((l, i) => { ctx.lineWidth = 10; ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.lineJoin = "round"; ctx.strokeText(l, W / 2, top + i * 88); ctx.fillStyle = "#fff"; ctx.fillText(l, W / 2, top + i * 88); });
     }
   }

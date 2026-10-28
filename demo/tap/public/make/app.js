@@ -387,11 +387,19 @@ function chunks(text) {
   return out.length ? out : [""];
 }
 
-function wrap(ctx, text, max) {
-  const lines = []; let line = "";
-  for (const w of text.split(" ")) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > max && line) { lines.push(line); line = w; } else line = t; }
-  if (line) lines.push(line);
-  return lines;
+function wrap(ctx, text, max, balance = false) {
+  const greedy = m => {
+    const lines = []; let line = "";
+    for (const w of text.split(" ")) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > m && line) { lines.push(line); line = w; } else line = t; }
+    if (line) lines.push(line);
+    return lines;
+  };
+  const lines = greedy(max);
+  if (!balance || lines.length < 2) return lines;
+  // Even lines, not a lone word under a full one: the narrowest width that still needs no more lines.
+  let lo = 0, hi = max;
+  while (hi - lo > 4) { const mid = (lo + hi) / 2; if (greedy(mid).length > lines.length) lo = mid; else hi = mid; }
+  return greedy(hi);
 }
 
 function background(ctx, bmp, t, seed) {
@@ -418,7 +426,7 @@ function background(ctx, bmp, t, seed) {
 function caption(ctx, text, appear) {
   ctx.font = "800 104px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  const lines = wrap(ctx, text.toUpperCase(), W - 140);
+  const lines = wrap(ctx, text.toUpperCase(), W - 140, true);
   const lh = 122, y0 = H * 0.66 - (lines.length - 1) * lh / 2;
   const k = Math.min(1, appear * 6), sc = 0.9 + 0.1 * k;
   ctx.save(); ctx.globalAlpha = k; ctx.translate(W / 2, 0); ctx.scale(sc, sc);

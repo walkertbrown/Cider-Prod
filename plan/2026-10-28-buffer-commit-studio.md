@@ -256,3 +256,20 @@ template, matching the posts the worked".)
     action) and take new angles, without repeating its lines. One script
     run.
   - The Buffer template, for writing by hand.
+
+## Polish, then keep adding (from 28 Oct)
+The boss, 28 Oct: "Next we polish and then we sit on it. We have so much
+time that we keep adding to it... with the confines of what we decided
+the app does". So: a link, a store or a long video in; shorts, plans and
+Buffer drafts out. Nothing outside that.
+
+Polish pass 1 (from screenshots at phone and desktop width):
+- /make starts with two equal choices, "From a link or a store" and "From
+  a long video". The long video is no longer hidden in a closed box. The
+  title is "Make shorts", and the top link goes back to "Your shorts".
+- Text boxes grow to fit their text (on-screen lines were cut off on a
+  phone).
+- The planner's controls wrap in pairs, and empty status lines take no
+  space.
+- Home: the links under "Sign in" sit on their own line. /me: the "Bio
+  link and counts" heading is styled like the others.

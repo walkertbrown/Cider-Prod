@@ -294,12 +294,12 @@ ${kept.has(p.id) ? '<span class="note">Kept</span>' : `<button class="small" for
   return page("Dailies", `
 <a href="/">Dailies</a>
 <h1>Your shorts</h1>
-<p><a class="primary" href="/make/" style="display:inline-block;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:600">Make shorts from a link</a></p>
+<p><a class="primary" href="/make/" style="display:inline-block;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:600">Make shorts</a></p>
 ${error ? `<p class="note" style="color:#c0392b">Couldn't refresh from Buffer: ${esc(error)} ${error.includes("Sign in") ? '<a href="/auth/start">Sign in</a>' : ""}</p>` : ""}
 ${flash ? `<p class="flash">${esc(flash)}</p>` : ""}
 ${madeSection(user)}
 ${keptSection(user, c)}
-<details${total ? " open" : ""}><summary><h2 style="display:inline">Bio link and counts</h2></summary>
+<details${total ? " open" : ""}><summary style="font-size:20px;font-weight:700;margin:32px 0 8px;cursor:pointer">Bio link and counts</summary>
 <p>Your bio link: <a href="${bio}"><b>${bio}</b></a><br><span class="note">Put it in your Instagram, TikTok or YouTube bio. Visitors pick the post they saw, and Dailies counts it before sending them on.</span></p>
 <p><span class="n">${total}</span> ${total === 1 ? "person" : "people"} so far${total ? "" : ". Nothing is counted until someone taps your bio link"}. ${skip.p} of them skipped straight to the site.</p>
 <form method="post" action="/me">

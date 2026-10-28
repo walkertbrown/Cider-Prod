@@ -330,3 +330,4 @@ up in the boss's Google Search Console. The boss: "Yes of course"
 - Traffic from the boss's social bios: "Oh no one is going to come to my page from my social bios. it may have happened once or twice over months" (2026-10-28, on Tap's bio link).
 - Product name: "It is your product" (2026-10-28, asked whether the Buffer Commit app is still called "Tap"; naming left to me).
 - Converting iPhone videos: "I don't know, theres no automated way to do it without asking someone" (2026-10-28, on whether to convert every upload to avoid HEVC).
+- Buffer Commit, after Keep this was built: "Next we polish and then we sit on it. We have so much time that we keep adding to it. No reason not to. We make this do anything and everything with the confines of what we decided the app does" (2026-10-28).
