@@ -325,3 +325,4 @@ up in the boss's Google Search Console. The boss: "Yes of course"
 - Buffer Commit: "I just registered" (2026-10-21, the boss's registration).
 - Buffer metrics: "I don't understand why they would be here if you couldn't use them in a 3rd party app." (2026-10-21, on Buffer's public API docs listing post metrics)
 - Buffer Commit additions: "We could do both. What if the post it again also stored like a template, matching the posts the worked or something" (2026-10-21; both = "Post it again" and taps-to-sales)
+- Visit counter: "Add our own visit counter to every page of your site and deploy it. Put this one line in the <head> of every page ... It only counts visits; it records nothing about a person. Change nothing else." (2026-10-27; script pulse.bananafest-destiny.com/p.js, data-site = the page's hostname)

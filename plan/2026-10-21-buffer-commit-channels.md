@@ -107,3 +107,11 @@ nearest things:
 - `clicks`: the closest thing for every network.
 So sales come from the user's Stripe (the post ID passed into the Payment
 Link), plus Substack's own count.
+
+## Build order (agreed with market-nana, 23 Oct; each step shippable alone)
+1. The tap page: posts cached once a day, taps counted by request shape, the
+   honest zero. If the build stops here, it is still an entry.
+2. Views and clicks next to taps (reads only).
+3. Keep this, then Post it again (writes; idea fallback if no template scope).
+4. Stripe last: optional, off by default, in the video only if it works with
+   a test-mode key.
