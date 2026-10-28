@@ -4,7 +4,7 @@ import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer
 const W = 1080, H = 1920, FPS = 30, END = 2.5;
 const $ = id => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
-const img = u => `/api/img?u=${encodeURIComponent(u)}`;
+const img = u => u.startsWith(location.origin + "/i/") ? u : `/api/img?u=${encodeURIComponent(u)}`;
 
 call.raw = async (path, body) => {
   const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -425,4 +425,23 @@ async function render(canvas, v, progress) {
   const blob = new Blob([target.buffer], { type: "video/mp4" });
   blob.vp9 = mux === "vp9"; blob.opus = sound?.mux === "opus";
   return blob;
+}
+
+// ---- A review link from Claude Code (/make/?job=<id>): the scripts are already written ----
+
+const job = new URLSearchParams(location.search).get("job");
+if (job) {
+  $("readStatus").textContent = "Loading the scripts Claude Code sent…";
+  call(`/api/job?id=${encodeURIComponent(job)}`, null, "GET").then(out => {
+    page = out.page;
+    $("readForm").hidden = true;
+    $("pTitle").textContent = page.title || page.host;
+    $("pHost").textContent = `From Claude Code${page.host ? " · " + page.host : ""}`;
+    $("pPages").replaceChildren();
+    $("pImgs").replaceChildren(...page.images.map(u => el("img", { src: img(u), alt: "", loading: "lazy", onerror() { this.remove(); } })));
+    $("count").replaceChildren(...Array.from({ length: 10 }, (_, i) => el("option", { value: i + 1, textContent: i + 1, selected: i + 1 === out.videos.length })));
+    $("pWhy").textContent = "Edit any line, then render. Write the scripts again for new ones.";
+    $("pageBox").hidden = false; $("readStatus").textContent = "";
+    $("videos").replaceChildren(...out.videos.map(videoCard)); allBox();
+  }).catch(err => { $("readStatus").textContent = err.message; $("readStatus").className = "status small bad"; });
 }

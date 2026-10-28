@@ -132,3 +132,22 @@ Already in place: several videos per link (1–10), several links, and music.
   Each video is drafted with its own caption and title.
 - Later in step 2: captions per network, and a tag per video so Keep this
   can find the winners.
+
+## Step 3 details: the MCP server (started 28 Oct, ahead of the 4–5 Nov slot)
+- **Keys.** "Make a Claude key" on /me shows the key once, with the
+  one-line `claude mcp add` command. Only a hash is stored (`key:<hash>` →
+  account). Making a new key replaces the old one. Disconnect deletes it.
+- **Endpoint.** /mcp, Streamable HTTP, stateless JSON-RPC over POST
+  (initialize, tools/list, tools/call, ping), with Bearer auth.
+- **Tools.**
+  - `make_build_video` takes {title, what_changed, details, url?,
+    image_urls?, images? (base64 screenshots, up to 4), count?}. It writes
+    the scripts in a build-in-public voice and stores a job for 7 days.
+    It returns a review link (/make/?job=<id>) where the owner renders and
+    drafts. Nothing is drafted without the owner.
+  - `list_channels`.
+  - `draft_post` makes text drafts on the networks that take text only.
+    Posts are drafts, never sent.
+  - `queue_status` gives drafts and scheduled posts per channel.
+- **Proof.** Add it to this repo's Claude Code and make the video of this
+  step with it.

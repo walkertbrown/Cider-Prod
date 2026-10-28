@@ -12,11 +12,15 @@
 //   GET  /go/<name>       the bio page's skip link, counted the same way
 //   GET  /t/<name>/<post> the post's thumbnail, fetched from Buffer and cached here
 //   /make, /api/*, /v/<id>.mp4  Link to Shorts (src/make.js)
+//   POST /me/key          make a Claude key (shown once) for /mcp
+//   POST /mcp             the Claude Code MCP server (src/mcp.js) · GET /i/<id> its screenshots
 // KV: tok:<acct> tokens · user:<acct> posts and settings · name:<name> → acct
 //     ses:<sid> → acct · n:<acct>:<post> {p, f} counts. Visitors get no cookie.
 //     v:<id> a rendered MP4 (30 days) · cap:<day>:<acct|all> script runs
+//     key:<sha256> → acct · job:<id> scripts from Claude Code (7 days) · img:<id> a screenshot (7 days)
 
 import { api, serveVideo } from "./make.js";
+import { mcp, sha256 } from "./mcp.js";
 
 const HOME = "https://tap.bananafest-destiny.com";
 const REDIRECT = HOME + "/auth/callback";
@@ -304,6 +308,9 @@ ${keptSection(user, c)}
 <p><button class="primary">Save</button> <a class="btn" href="/me?refresh">Refresh from Buffer</a></p>
 </form>
 <p class="note">A person is counted when a browser opens the link as a page. Link previews, checkers and crawlers are counted apart as fetchers. Posts were read from Buffer ${user.postsAt ? new Date(user.postsAt).toUTCString().slice(5, 22) + " UTC" : "not yet"}. Buffer doesn't let outside apps read post views or clicks yet, so this page shows only what Tap counts itself.</p>
+<h2>Claude Code</h2>
+<p class="note">Let Claude Code make videos of what you build: it sends what shipped, Tap writes the scripts, and you get a link here to render and draft them. Nothing posts without you.${user.mcpKey ? ` Your key was made ${esc(day(user.mcpKey.at))} and ends in ${esc(user.mcpKey.tail)}.` : ""}</p>
+<form method="post" action="/me/key"${user.mcpKey ? ` onsubmit="return confirm('Make a new key? The old one stops working.')"` : ""}><button>${user.mcpKey ? "Make a new Claude key" : "Make a Claude key"}</button></form>
 <form method="post" action="/me/disconnect" onsubmit="return confirm('Delete everything Tap keeps for this account?')"><button>Disconnect and delete</button></form>`);
 }
 
@@ -438,8 +445,25 @@ async function save(req, env, { acct, user }) {
   return new Response(null, { status: 303, headers: { location: "/me" } });
 }
 
+// A Claude key: shown once; only its hash is kept. A new key replaces the old one.
+async function makeKey(req, env, { acct, user }) {
+  const key = `tap_${rand(24)}`;
+  if (user.mcpKey) await env.TAP.delete(`key:${user.mcpKey.hash}`);
+  user.mcpKey = { hash: await sha256(key), tail: key.slice(-4), at: new Date().toISOString() };
+  await env.TAP.put(`key:${user.mcpKey.hash}`, acct);
+  await putJSON(env, `user:${acct}`, user);
+  const cmd = `claude mcp add --transport http tap ${HOME}/mcp --header "Authorization: Bearer ${key}"`;
+  return page("Your Claude key", `<a href="/me">Tap</a><h1>Your Claude key</h1>
+<p>Copy it now: Tap keeps only a fingerprint of it and can't show it again.</p>
+<p><code style="word-break:break-all">${esc(key)}</code></p>
+<p>In your project's folder, run this once:</p>
+<pre style="white-space:pre-wrap;word-break:break-all"><code>${esc(cmd)}</code></pre>
+<p class="note">Then ask Claude Code, after you ship something, to "make a build video with Tap". It sends what changed (and screenshots or the live link if you like), and gets back a review link to this account. Anyone with the key can make scripts and text drafts here, never posts. Lost it? Make a new one; the old one stops working.</p>
+<p><a href="/me">Back to your posts</a></p>`, { headers: { "cache-control": "no-store" } });
+}
+
 async function disconnect(env, { acct, user }) {
-  const keys = [`tok:${acct}`, `user:${acct}`, `name:${user.name}`, ...(user.sessions || []).map(s => `ses:${s}`), ...(user.videos || []).map(v => `v:${v.id}`)];
+  const keys = [`tok:${acct}`, `user:${acct}`, `name:${user.name}`, ...(user.sessions || []).map(s => `ses:${s}`), ...(user.videos || []).map(v => `v:${v.id}`), ...(user.mcpKey ? [`key:${user.mcpKey.hash}`] : [])];
   let cursor;
   do {
     const l = await env.TAP.list({ prefix: `n:${acct}:`, cursor });
@@ -447,7 +471,7 @@ async function disconnect(env, { acct, user }) {
     cursor = l.list_complete ? null : l.cursor;
   } while (cursor);
   await Promise.all(keys.map(k => env.TAP.delete(k)));
-  return page("Disconnected", `<a href="/">Tap</a><h1>Disconnected</h1><p>Everything Tap kept for this account is deleted: the Buffer access, the copy of your posts, the counts, the bio link and the videos you made. To remove Tap from Buffer's side too, open your Buffer settings, then Apps.</p>`,
+  return page("Disconnected", `<a href="/">Tap</a><h1>Disconnected</h1><p>Everything Tap kept for this account is deleted: the Buffer access, the copy of your posts, the counts, the bio link, the videos you made and your Claude key. To remove Tap from Buffer's side too, open your Buffer settings, then Apps.</p>`,
     { headers: { "set-cookie": "tap_sid=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax" } });
 }
 
@@ -461,6 +485,11 @@ export default {
     if ((m = path.match(/^\/p\/([a-z0-9]+)\/([a-z0-9]+)$/))) return tap(env, ctx, req, m[1], m[2]);
     if ((m = path.match(/^\/t\/([a-z0-9]+)\/([a-z0-9]+)$/))) return thumb(env, m[1], m[2]);
     if ((m = path.match(/^\/v\/([A-Za-z0-9]+)\.mp4$/))) return serveVideo(env, req, m[1]);
+    if (path === "/mcp") return mcp(req, env, { rand, getJSON, refreshPosts, accessToken, gql, errText });
+    if ((m = path.match(/^\/i\/([A-Za-z0-9]+)$/))) {
+      const { value, metadata } = await env.TAP.getWithMetadata(`img:${m[1]}`, "arrayBuffer");
+      return value ? new Response(value, { headers: { "content-type": metadata?.type || "image/png", "cache-control": "public, max-age=86400", "x-robots-tag": "noindex" } }) : new Response("Not found", { status: 404 });
+    }
     if (path.startsWith("/api/")) {
       const o = await owner(req, env);
       if (!o) return new Response(JSON.stringify({ error: "Sign in with Buffer first." }), { status: 401, headers: { "content-type": "application/json" } });
@@ -476,7 +505,7 @@ export default {
       const user = acct && await getJSON(env, `user:${acct}`);
       return user ? bioPage(user) : page("Not found", "<h1>No page here</h1>", { status: 404 });
     }
-    const ME = { "/me": save, "/me/keep": keep, "/me/again": again, "/me/forget": forget, "/me/disconnect": (req, env, o) => disconnect(env, o) };
+    const ME = { "/me": save, "/me/keep": keep, "/me/again": again, "/me/forget": forget, "/me/key": makeKey, "/me/disconnect": (req, env, o) => disconnect(env, o) };
     if (ME[path]) {
       const o = await owner(req, env);
       if (!o) return Response.redirect(`${HOME}/auth/start`, 302);

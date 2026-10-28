@@ -6,6 +6,7 @@
 //   GET  /api/img?u=   an image from the page, re-served so the canvas can encode it
 //   PUT  /api/upload   an MP4 from the browser → {id, url}
 //   GET  /api/channels the account's Buffer channels
+//   GET  /api/job?id=  a video job made from Claude Code (src/mcp.js), for review here
 //   POST /api/draft    {video, channels, caption, title} → one Buffer draft per channel
 //   GET  /v/<id>.mp4   the hosted video, public, for Buffer to fetch (with ranges)
 
@@ -22,7 +23,7 @@ const decode = s => s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;
   .replace(/&nbsp;/g, " ").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
 const strip = s => decode(s.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 
-function safeHttp(s) {
+export function safeHttp(s) {
   try { const u = new URL(String(s).trim()); return /^https?:$/.test(u.protocol) && !/^(localhost|127\.|10\.|192\.168\.|\[)/.test(u.hostname) ? u : null; } catch { return null; }
 }
 
@@ -117,7 +118,7 @@ Rules:
 - caption: the post text for the networks, 1 to 3 short sentences plus the site address, at most 260 characters, no hashtags. title: at most 90 characters, for YouTube. hashtags: 3 to 6 relevant single words or CamelCase phrases, without "#".
 Return JSON only: {"note": string, "videos": [{"angle": string, "title": string, "caption": string, "hashtags": [string], "scenes": [{"text": string, "image": integer or null, "seconds": number}]}]}`;
 
-async function writeScripts(env, page, count) {
+export async function writeScripts(env, page, count, extra = "") {
   const input = `Host: ${page.host}\nURL: ${page.url}\nTitle: ${page.title}\nDescription: ${page.description}\n` +
     (page.products?.length ? `Products: ${JSON.stringify(page.products)}\n` : "") +
     `Images (index: url): ${page.images.map((u, i) => `${i}: ${u.split("/").pop().slice(0, 60)}`).join("; ") || "none"}\n\nPage text:\n${String(page.text || "").slice(0, 14000)}\n\nWrite ${count} video${count === 1 ? "" : "s"}.`;
@@ -125,7 +126,7 @@ async function writeScripts(env, page, count) {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
     body: JSON.stringify({ model: SCRIPT_MODEL, response_format: { type: "json_object" }, reasoning_effort: "low",
-      messages: [{ role: "system", content: SCRIPT_RULES }, { role: "user", content: input }] }),
+      messages: [{ role: "system", content: SCRIPT_RULES + extra }, { role: "user", content: input }] }),
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) return { error: d.error?.message || `The script writer answered ${r.status}.` };
@@ -139,7 +140,7 @@ async function writeScripts(env, page, count) {
 }
 
 // One daily counter per account and one overall, in KV (approximate under races; fine as a cap).
-async function underCap(env, acct, kind) {
+export async function underCap(env, acct, kind) {
   const [perAcct, overall] = CAPS[kind], tag = kind === "script" ? "" : kind + ":";
   const kA = `cap:${tag}${today()}:${acct}`, kAll = `cap:${tag}${today()}:all`;
   const [a, all] = await Promise.all([env.TAP.get(kA), env.TAP.get(kAll)]);
@@ -151,7 +152,7 @@ async function underCap(env, acct, kind) {
 
 // ---- Drafting --------------------------------------------------------------
 
-const cleanTags = list => [...new Set([].concat(list || []).map(t => String(t).replace(/[^\p{L}\p{N}_]/gu, "")).filter(Boolean))].slice(0, 8);
+export const cleanTags = list => [...new Set([].concat(list || []).map(t => String(t).replace(/[^\p{L}\p{N}_]/gu, "")).filter(Boolean))].slice(0, 8);
 
 // The post text each network gets: the caption, plus as many hashtags as suit it.
 export function captionFor(service, caption, hashtags) {
@@ -182,7 +183,7 @@ export function postInput(ch, { text, video, title, category, tagIds = [] }) {
   return i;
 }
 
-const CREATE_POST = `mutation($i:CreatePostInput!){ createPost(input:$i){ __typename ... on PostActionSuccess { post { id } }
+export const CREATE_POST = `mutation($i:CreatePostInput!){ createPost(input:$i){ __typename ... on PostActionSuccess { post { id } }
   ... on InvalidInputError { message } ... on LimitReachedError { message } ... on UnauthorizedError { message } ... on UnexpectedError { message } ... on RestProxyError { message } ... on NotFoundError { message } } }`;
 
 // ---- Routes ----------------------------------------------------------------
@@ -255,6 +256,11 @@ export async function api(req, env, path, { acct, user }, d) {
     user.videos = [...(user.videos || []).filter(v => v.until > Date.now()), { id, until: Date.now() + VIDEO_TTL * 1000 }];
     await d.putJSON(env, `user:${acct}`, user);
     return json({ id, url: `${url.origin}/v/${id}.mp4` });
+  }
+  if (path === "/api/job" && req.method === "GET") {
+    const job = await env.TAP.get(`job:${url.searchParams.get("id")}`, "json");
+    if (!job || job.acct !== acct) return json({ error: "That review link has expired or belongs to another account." }, 404);
+    return json({ page: job.page, videos: job.videos, note: job.note });
   }
   if (path === "/api/channels" && req.method === "GET") {
     if (!user.channels) ({ user } = await d.refreshPosts(env, acct, user));
