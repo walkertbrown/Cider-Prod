@@ -25,7 +25,7 @@ async function call(path, body, method = "POST") {
 let page = null, channels = null;
 
 $("readForm").onsubmit = async e => {
-  e.preventDefault(); $("storeBox").hidden = true;
+  e.preventDefault(); $("storeBox").hidden = true; $("planBox").hidden = true; $("planList").replaceChildren(); $("planActs").hidden = true; $("planStatus").textContent = "";
   $("readBtn").disabled = true; $("readStatus").textContent = "Reading…"; $("readStatus").className = "status small"; $("pageBox").hidden = true;
   try {
     page = await call("/api/read", { urls: $("url").value.split(/\s+/).filter(Boolean) });
@@ -38,6 +38,7 @@ $("readForm").onsubmit = async e => {
     $("pWhy").textContent = `Suggested: ${page.suggested}. ${page.pages.length > 1 ? `The ${page.pages.length} pages have` : "The page has"} ${page.why}. More than that gets you different angles on the same material.`;
     $("pageBox").hidden = false; $("readStatus").textContent = "";
     showStore(page.store);
+    showPlan();
   } catch (err) { $("readStatus").textContent = err.message; $("readStatus").className = "status small bad"; }
   $("readBtn").disabled = false;
 };
@@ -92,6 +93,53 @@ $("storeBtn").onclick = async () => {
   $("storeStatus").textContent = failed.join(" ");
   $("storeStatus").className = failed.length ? "status small bad" : "status small";
   storeCount();
+};
+
+// ---- The planner: a month of dated items; write any video from it, or save it as Buffer Ideas ----
+
+let plan = [];
+const NET = { instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", twitter: "X", bluesky: "Bluesky", threads: "Threads", linkedin: "LinkedIn", facebook: "Facebook", mastodon: "Mastodon" };
+function showPlan() {
+  $("planBox").hidden = false;
+  if (!$("start").value) $("start").value = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+}
+$("planBtn").onclick = async () => {
+  $("planBtn").disabled = true; $("planStatus").className = "status small"; $("planStatus").textContent = "Laying out the plan… (about 10–30 seconds)";
+  $("ideasOut").replaceChildren();
+  try {
+    ({ items: plan } = await call("/api/plan", { page, start: $("start").value, weeks: +$("weeks").value, perWeek: +$("perWeek").value }));
+    $("planStatus").textContent = `${plan.length} posts.`;
+    const day = d => new Date(d + "T12:00:00Z").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+    $("planList").replaceChildren(el("table", { className: "plan" }, ...plan.map(it => {
+      const act = it.kind === "video" ? el("button", { textContent: "Write this video", async onclick() {
+        this.disabled = true; this.textContent = "Writing…";
+        try {
+          const out = await call("/api/scripts", { page: it.page || page, count: 1, angle: it });
+          for (const v of out.videos) { v.angle = v.angle || it.angle; $("videos").append(videoCard(v, cards.length)); }
+          allBox(); this.textContent = "Written below";
+        } catch (err) { this.textContent = "Write this video"; this.disabled = false; $("planStatus").textContent = err.message; $("planStatus").className = "status small bad"; }
+      } }) : "";
+      return el("tr", {},
+        el("td", {}, el("input", { type: "checkbox", checked: true, onchange() { it.skip = !this.checked; } })),
+        el("td", { className: "d", textContent: day(it.date) }),
+        el("td", {}, el("strong", { textContent: it.angle }), el("div", { textContent: it.hook }),
+          el("div", { className: "small muted", textContent: `${it.kind === "video" ? "Video" : "Text"} · ${it.services.map(s => NET[s] || s).join(", ")}${it.text ? " · " + it.text : ""}` })),
+        el("td", {}, act));
+    })));
+    $("planActs").hidden = !plan.length;
+  } catch (err) { $("planStatus").textContent = err.message; $("planStatus").className = "status small bad"; }
+  $("planBtn").disabled = false;
+};
+$("ideasBtn").onclick = async () => {
+  const items = plan.filter(it => !it.skip);
+  $("ideasBtn").disabled = true; $("ideasOut").className = "status small"; $("ideasOut").textContent = `Saving ${items.length} ideas…`;
+  try {
+    const { results } = await call("/api/ideas", { items });
+    const bad = results.filter(r => !r.ok);
+    $("ideasOut").textContent = `${results.length - bad.length} of ${results.length} saved as Ideas in Buffer.` + bad.map(r => ` ${r.date}: ${r.error}`).join("");
+    if (bad.length) $("ideasOut").className = "status small bad";
+  } catch (err) { $("ideasOut").textContent = err.message; $("ideasOut").className = "status small bad"; }
+  $("ideasBtn").disabled = false;
 };
 
 // ---- One video's card: editable script, render, preview, draft --------------

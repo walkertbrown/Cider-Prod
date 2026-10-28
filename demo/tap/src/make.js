@@ -1,13 +1,15 @@
 // Link to Shorts: read a page, write scripts, host the videos the browser
 // renders, and draft them into Buffer.
 //   POST /api/read     {urls} (1–5) → the pages' titles, text, images, and a suggested count
-//   POST /api/scripts  {page, count} → video scripts (language model, capped)
+//   POST /api/scripts  {page, count, angle?} → video scripts (language model, capped)
 //   POST /api/voice    {text, voice} → MP3 of one line read aloud (text-to-speech, capped)
 //   GET  /api/img?u=   an image from the page, re-served so the canvas can encode it
 //   PUT  /api/upload   an MP4 from the browser → {id, url}
 //   GET  /api/channels the account's Buffer channels
 //   GET  /api/job?id=  a video job made from Claude Code (src/mcp.js), for review here
 //   POST /api/draft    {video, channels, caption, title} → one Buffer draft per channel
+//   POST /api/plan     {page, start, weeks, perWeek} → dated items for the connected networks (capped)
+//   POST /api/ideas    {items} → one Buffer Idea per item (Buffer has no API to delete ideas)
 //   GET  /v/<id>.mp4   the hosted video, public, for Buffer to fetch (with ranges)
 
 const SCRIPT_MODEL = "gpt-5.4-mini";
@@ -164,6 +166,42 @@ export async function writeScripts(env, page, count, extra = "") {
   return out;
 }
 
+// ---- The planner: a month of dated items from the page and the connected networks ----
+
+const TEXT_NETS = new Set(["twitter", "bluesky", "threads", "linkedin", "facebook", "mastodon"]);
+const PLAN_RULES = `You plan a month of social posts that promote a web page (or a store). You get the page, its products if any, the networks the owner has connected, and the dates to use.
+Rules:
+- One item per date given, in order. Each item is either a short vertical video (for instagram, tiktok, youtube) or a text post (for twitter, bluesky, threads, linkedin, facebook, mastodon). Only use networks from the connected list. A video item goes to all connected video networks; a text item to all connected text networks.
+- If there are no text networks, every item is a video. If there are no video networks, every item is text.
+- Every item has its own angle: a different feature, product, use, question or number from the page. No two items repeat. For a store, spread items across different products.
+- Use only facts that are on the page. Never invent numbers, prices, reviews or claims.
+- "angle" is a short label (under 8 words). "hook" is the first line someone sees or hears (under 12 words). "notes" says in one or two sentences what the post covers, so it can be written later. For a text item, "text" is the finished post (under 260 characters, no hashtags); for a video item, "text" is "".
+Return JSON: {"items":[{"date":"YYYY-MM-DD","kind":"video"|"text","angle":"...","hook":"...","notes":"...","text":"..."}]}`;
+
+async function writePlan(env, page, dates, nets) {
+  const video = nets.filter(n => !TEXT_NETS.has(n)), text = nets.filter(n => TEXT_NETS.has(n));
+  const input = `Host: ${page.host}\nURL: ${page.url}\nTitle: ${page.title}\nDescription: ${page.description}\n` +
+    (page.store ? `Store products: ${JSON.stringify(page.store.products.slice(0, 30).map(p => ({ title: p.title, price: p.price, type: p.type })))}\n` : "") +
+    `Video networks connected: ${video.join(", ") || "none"}\nText networks connected: ${text.join(", ") || "none"}\nDates: ${dates.join(", ")}\n\nPage text:\n${String(page.text || "").slice(0, 12000)}`;
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    body: JSON.stringify({ model: SCRIPT_MODEL, response_format: { type: "json_object" }, reasoning_effort: "low",
+      messages: [{ role: "system", content: PLAN_RULES }, { role: "user", content: input }] }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) return { error: d.error?.message || `The planner answered ${r.status}.` };
+  let out; try { out = JSON.parse(d.choices[0].message.content); } catch { return { error: "The planner returned something unreadable. Try again." }; }
+  const items = (out.items || []).slice(0, dates.length).map((it, i) => {
+    const kind = it.kind === "text" && text.length || !video.length ? "text" : "video";
+    return { date: dates[i], kind, services: kind === "text" ? text : video, angle: String(it.angle || "").slice(0, 80), hook: String(it.hook || "").slice(0, 140),
+      notes: String(it.notes || "").slice(0, 400), text: kind === "text" ? String(it.text || "").slice(0, 300) : "" };
+  });
+  return { items };
+}
+
+const CREATE_IDEA = `mutation($i:CreateIdeaInput!){ createIdea(input:$i){ __typename ... on Idea { id } ... on InvalidInputError { message } ... on UnauthorizedError { message } ... on UnexpectedError { message } ... on LimitReachedError { message } } }`;
+
 // One daily counter per account and one overall, in KV (approximate under races; fine as a cap).
 export async function underCap(env, acct, kind) {
   const [perAcct, overall] = CAPS[kind], tag = kind === "script" ? "" : kind + ":";
@@ -246,11 +284,13 @@ export async function api(req, env, path, { acct, user }, d) {
     catch (e) { return json({ error: `Couldn't read the page: ${e.message}` }, 422); }
   }
   if (path === "/api/scripts" && req.method === "POST") {
-    const { page, count } = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({})), { page, count } = body;
     if (!page?.text && !page?.description) return json({ error: "Read a page first." }, 400);
     const capped = await underCap(env, acct, "script");
     if (capped) return json({ error: capped }, 429);
-    const out = await writeScripts(env, page, Math.max(1, Math.min(10, +count || 1)), page.build ? BUILD_VOICE : "");
+    const { angle } = body;
+    const extra = (page.build ? BUILD_VOICE : "") + (angle ? `\n\nWrite this one for a planned post. Its angle: ${String(angle.angle || "").slice(0, 80)}. Its hook: ${String(angle.hook || "").slice(0, 140)}. What it covers: ${String(angle.notes || "").slice(0, 400)}` : "");
+    const out = await writeScripts(env, page, Math.max(1, Math.min(10, +count || 1)), extra);
     return json(out, out.error ? 502 : 200);
   }
   if (path === "/api/voice" && req.method === "POST") {
@@ -294,7 +334,40 @@ export async function api(req, env, path, { acct, user }, d) {
   }
   if (path === "/api/channels" && req.method === "GET") {
     if (!user.channels) ({ user } = await d.refreshPosts(env, acct, user));
-    return json({ channels: (user.channels || []).filter(c => VIDEO_NETS.has(c.service)) });
+    return json({ channels: (user.channels || []).filter(c => VIDEO_NETS.has(c.service) || url.searchParams.has("all")) });
+  }
+  if (path === "/api/plan" && req.method === "POST") {
+    const { page, start, weeks, perWeek } = await req.json().catch(() => ({}));
+    if (!page?.text && !page?.description && !page?.store) return json({ error: "Read a page first." }, 400);
+    if (!user.channels) ({ user } = await d.refreshPosts(env, acct, user));
+    const nets = [...new Set((user.channels || []).map(c => c.service))].filter(n => VIDEO_NETS.has(n) || TEXT_NETS.has(n));
+    if (!nets.length) return json({ error: "Connect a channel in Buffer first." }, 400);
+    const n = Math.max(2, Math.min(7, +perWeek || 3)), w = Math.max(1, Math.min(4, +weeks || 4));
+    const first = /^\d{4}-\d{2}-\d{2}$/.test(start || "") ? new Date(start + "T12:00:00Z") : new Date(Date.now() + 86400000);
+    const days = [[3], [1, 4], [0, 2, 4], [0, 1, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5, 6]][n - 1];
+    const dates = [];
+    for (let k = 0; k < w; k++) for (const x of days) dates.push(new Date(first.getTime() + (k * 7 + x) * 86400000).toISOString().slice(0, 10));
+    const capped = await underCap(env, acct, "script");
+    if (capped) return json({ error: capped }, 429);
+    const out = await writePlan(env, page, dates, nets);
+    return json(out, out.error ? 502 : 200);
+  }
+  if (path === "/api/ideas" && req.method === "POST") {
+    const { items } = await req.json().catch(() => ({}));
+    const list = (Array.isArray(items) ? items : []).slice(0, 28);
+    if (!list.length) return json({ error: "Tick at least one item." }, 400);
+    const token = await d.accessToken(env, acct);
+    if (!token) return json({ error: "Sign in with Buffer again." }, 401);
+    const results = [];
+    for (const it of list) {
+      const services = [].concat(it.services || []).filter(s => VIDEO_NETS.has(s) || TEXT_NETS.has(s));
+      const content = { title: String(it.angle || "").slice(0, 80), text: [it.hook, it.text || it.notes].filter(Boolean).map(String).join("\n\n").slice(0, 1000), aiAssisted: true, services };
+      if (/^\d{4}-\d{2}-\d{2}$/.test(it.date || "")) content.date = `${it.date}T12:00:00.000Z`;
+      const r = await d.gql(token, CREATE_IDEA, { i: { organizationId: user.orgId, content } });
+      const x = r.data?.createIdea;
+      results.push(x?.id ? { ok: true, date: it.date } : { ok: false, date: it.date, error: d.errText(r) || x?.message || `Buffer answered ${r.status}.` });
+    }
+    return json({ results });
   }
   if (path === "/api/draft" && req.method === "POST") {
     const { video, channels, caption, title, hashtags, angle } = await req.json().catch(() => ({}));

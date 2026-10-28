@@ -32,6 +32,9 @@ button:disabled{opacity:.5;cursor:default}
 video,canvas.preview{width:100%;max-width:240px;aspect-ratio:9/16;background:#000;border-radius:10px;display:block}
 label.ch{display:inline-flex;gap:6px;align-items:center;margin:4px 12px 4px 0}
 .status{min-height:1.4em}
+table.plan{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}
+table.plan td{border-top:1px solid var(--line);padding:8px 6px;vertical-align:top}
+table.plan .d{white-space:nowrap;color:var(--muted)}table.plan button{padding:4px 10px;font-size:14px}
 .prods{max-height:360px;overflow-y:auto;border-top:1px solid var(--line)}
 label.prod{display:grid;grid-template-columns:22px 48px 1fr;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer}
 label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
@@ -73,6 +76,23 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
     <div class="row" style="margin-top:10px"><button class="primary" id="storeBtn">Write one per product</button></div>
   </div>
   <p class="status small" id="storeStatus"></p>
+</section>
+
+<section id="planBox" hidden>
+  <div class="card">
+    <strong>Plan a month</strong>
+    <p class="small muted" style="margin:4px 0 8px">Tap lays out dated posts from this page for the networks you've connected in Buffer: videos for Instagram, TikTok and YouTube, text for the others. Write any video from it below, or save the plan into Buffer as Ideas.</p>
+    <div class="row">
+      <label for="perWeek">Posts a week</label><select id="perWeek" style="width:auto"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>7</option></select>
+      <label for="weeks">Weeks</label><select id="weeks" style="width:auto"><option>1</option><option>2</option><option>3</option><option selected>4</option></select>
+      <label for="start">From</label><input type="date" id="start" style="width:auto">
+      <button class="primary" id="planBtn">Lay out the plan</button>
+    </div>
+    <p class="status small" id="planStatus"></p>
+    <div id="planList"></div>
+    <div class="row" id="planActs" hidden><button class="primary" id="ideasBtn">Save ticked items as Buffer Ideas</button></div>
+    <div class="status small" id="ideasOut"></div>
+  </div>
 </section>
 
 <section id="videos"></section>
