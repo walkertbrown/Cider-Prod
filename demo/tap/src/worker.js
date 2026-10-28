@@ -7,6 +7,7 @@
 //   GET  /u/<name>        the public bio page: one tile per post
 //   GET  /p/<name>/<post> count a tap, then send the visitor on
 //   GET  /go/<name>       the bio page's skip link, counted the same way
+//   GET  /t/<name>/<post> the post's thumbnail, fetched from Buffer and cached here
 // KV: tok:<acct> tokens · user:<acct> posts and settings · name:<name> → acct
 //     ses:<sid> → acct · n:<acct>:<post> {p, f} counts. Visitors get no cookie.
 
@@ -36,6 +37,7 @@ button,.btn{display:inline-block;padding:8px 14px;border-radius:8px;border:1px s
 .tile{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .tile img{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;background:var(--line)}
 .tile span{display:block;padding:8px;font-size:14px;line-height:1.35}.tile small{color:var(--muted)}
+th.num,td.num{width:4.5em;white-space:nowrap}
 .thumb{width:48px;aspect-ratio:9/16;object-fit:cover;border-radius:4px;background:var(--line)}`;
 
 function page(title, body, { status = 200, headers = {}, index = false } = {}) {
@@ -224,6 +226,19 @@ async function tap(env, ctx, req, name, sid) {
   return new Response(null, { status: 302, headers: { location: to || `${HOME}/u/${name}`, "cache-control": "no-store", "referrer-policy": "no-referrer-when-downgrade" } });
 }
 
+// Visitors' browsers never fetch from Buffer: Tap fetches each thumbnail once
+// and Cloudflare keeps it for a day.
+async function thumb(env, name, sid) {
+  const acct = await env.TAP.get(`name:${name}`);
+  const user = acct && await getJSON(env, `user:${acct}`);
+  const p = user?.posts.find(p => shortId(p.id) === sid);
+  if (!p?.thumb?.startsWith("https://")) return new Response("Not found", { status: 404 });
+  const r = await fetch(p.thumb, { cf: { cacheEverything: true, cacheTtl: 86400 } });
+  const type = r.headers.get("content-type") || "";
+  if (!r.ok || !type.startsWith("image/")) return new Response("No thumbnail", { status: 502 });
+  return new Response(r.body, { headers: { "content-type": type, "cache-control": "public, max-age=86400" } });
+}
+
 // ---- Pages -----------------------------------------------------------------
 
 const NET = { instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", facebook: "Facebook", linkedin: "LinkedIn", twitter: "X", threads: "Threads", bluesky: "Bluesky", mastodon: "Mastodon", pinterest: "Pinterest" };
@@ -232,7 +247,7 @@ const day = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numer
 
 function bioPage(user) {
   const tiles = user.posts.map(p => `<a class="tile" href="/p/${user.name}/${shortId(p.id)}">
-${p.thumb ? `<img src="${esc(p.thumb)}" alt="" loading="lazy">` : ""}<span>${esc(p.title)}<br><small>${esc(net(p.service))} · ${esc(day(p.sentAt))}</small></span></a>`).join("");
+${p.thumb ? `<img src="/t/${user.name}/${shortId(p.id)}" alt="" loading="lazy">` : ""}<span>${esc(p.title)}<br><small>${esc(net(p.service))} · ${esc(day(p.sentAt))}</small></span></a>`).join("");
   return page("Which post brought you here?", `
 <h1>Which post brought you here?</h1>
 <p>Tap the one you saw. <a href="/go/${user.name}">Or skip straight to the site</a>.</p>
@@ -248,10 +263,10 @@ async function mePage(env, ctx, req, { acct, user }) {
   const bio = `${HOME}/u/${user.name}`;
   const rows = user.posts.map(p => {
     const n = c[p.id] || { p: 0, f: 0 };
-    return `<tr><td>${p.thumb ? `<img class="thumb" src="${esc(p.thumb)}" alt="">` : ""}</td>
+    return `<tr><td>${p.thumb ? `<img class="thumb" src="/t/${user.name}/${shortId(p.id)}" alt="" loading="lazy">` : ""}</td>
 <td>${p.link ? `<a href="${esc(p.link)}">${esc(p.title)}</a>` : esc(p.title)}<br><span class="note">${esc(net(p.service))} · ${esc(day(p.sentAt))}</span>
 <input type="url" name="d_${esc(p.id)}" value="${esc(user.dest?.[p.id] || "")}" placeholder="${esc(p.found || user.mainDest || "Where should this post send people?")}" aria-label="Destination"></td>
-<td><span class="n">${n.p}</span><br><span class="note">${n.f ? `+${n.f} fetcher${n.f === 1 ? "" : "s"}` : ""}</span></td></tr>`;
+<td class="num"><span class="n">${n.p}</span><br><span class="note">${n.f ? `+${n.f} fetcher${n.f === 1 ? "" : "s"}` : ""}</span></td></tr>`;
   }).join("");
   const skip = c.skip || { p: 0, f: 0 };
   return page("Your posts", `
@@ -263,7 +278,7 @@ ${error ? `<p class="note" style="color:#c0392b">Couldn't refresh from Buffer: $
 <form method="post" action="/me">
 <p><label>Main site (for the skip link, and posts with no address of their own)<br>
 <input type="url" name="main" value="${esc(user.mainDest || "")}" placeholder="https://"></label></p>
-<table><tr><th></th><th>Post, and where it sends people</th><th>People</th></tr>${rows || '<tr><td></td><td class="note">No sent posts in Buffer yet.</td><td></td></tr>'}</table>
+<table><tr><th></th><th>Post, and where it sends people</th><th class="num">People</th></tr>${rows || '<tr><td></td><td class="note">No sent posts in Buffer yet.</td><td></td></tr>'}</table>
 <p><button class="primary">Save</button> <a class="btn" href="/me?refresh">Refresh from Buffer</a></p>
 </form>
 <p class="note">A person is counted when a browser opens the link as a page. Link previews, checkers and crawlers are counted apart as fetchers. Posts were read from Buffer ${user.postsAt ? new Date(user.postsAt).toUTCString().slice(5, 22) + " UTC" : "not yet"}. Buffer doesn't let outside apps read post views or clicks yet, so this page shows only what Tap counts itself.</p>
@@ -302,6 +317,7 @@ export default {
     if (path === "/auth/callback") return callback(url, env);
     let m;
     if ((m = path.match(/^\/p\/([a-z0-9]+)\/([a-z0-9]+)$/))) return tap(env, ctx, req, m[1], m[2]);
+    if ((m = path.match(/^\/t\/([a-z0-9]+)\/([a-z0-9]+)$/))) return thumb(env, m[1], m[2]);
     if ((m = path.match(/^\/go\/([a-z0-9]+)$/))) return tap(env, ctx, req, m[1], null);
     if ((m = path.match(/^\/u\/([a-z0-9]+)$/))) {
       const acct = await env.TAP.get(`name:${m[1]}`);
