@@ -191,3 +191,30 @@ Already in place: several videos per link (1–10), several links, and music.
   `deleteIdea`, so ideas can only be deleted in Buffer. The live test makes
   exactly one idea, titled "Test idea from Tap, delete me", and the boss is
   told to delete it.
+
+## Step 5 details: long video to clips (started 28 Oct)
+- **Everything heavy stays in the browser.** The long video is opened from
+  the device and never uploaded whole. mp4box.js (jsDelivr) reads the MP4
+  or MOV index, and WebCodecs decodes only the parts that are needed. MP4
+  and MOV only for now, which covers phones and screen recorders.
+- **Words with times.** The browser decodes the soundtrack, turns it into
+  16 kHz mono WAV in pieces of up to 10 minutes, and sends each piece to
+  Tap. Tap passes it to OpenAI's whisper-1 for timed words and sentences.
+  Cap: 60 minutes of audio a day per account, 600 overall. Videos up to
+  60 minutes.
+- **Picking the moments.** The timed sentences go to the script model. It
+  returns the N best stand-alone moments (20–60 s each, no overlap), each
+  with a title, caption and hashtags. That counts as one script run. N is
+  the user's choice (1–10); a number is suggested from the length.
+- **Cutting.** For each moment, the browser decodes from the keyframe
+  before the start, crops to 9:16 vertical, and burns in captions a few
+  words at a time from the timed words. Two layouts: "Fill" crops the
+  middle, and "Fit" shows the whole frame on a blurred copy of itself with
+  the title above. Phone rotation is honoured. Audio is cut to the same
+  times with short fades. Output is H.264 (VP9 fallback) at 30 fps or less.
+- **Then** each clip is a card like the others: edit the title, caption
+  and hashtags; Render, Render all, Draft, Draft all.
+- **Testing.** Playwright's Chromium can't decode H.264, so the tests use
+  Chrome for Testing (it decodes H.264 and AAC). The test file is a
+  94-second H.264/AAC talk made here, with a clock on screen to check the
+  cut points.
