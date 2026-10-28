@@ -1,7 +1,12 @@
 // Tap: which of your Buffer posts sent people. Buffer Commit, 28 Oct – 13 Nov.
+// Committed template. The real KV id lives in .wrangler/local.jsonc (ignored):
+// deploy with `npx wrangler@4 deploy -c .wrangler/local.jsonc`.
+// Secrets (wrangler secret put): BUFFER_CLIENT_ID, BUFFER_CLIENT_SECRET.
 {
   "name": "tap",
+  "main": "src/worker.js",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "./public" },
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "kv_namespaces": [{ "binding": "TAP", "id": "<kv-id>" }],
   "routes": [{ "pattern": "tap.bananafest-destiny.com", "custom_domain": true }]
 }
