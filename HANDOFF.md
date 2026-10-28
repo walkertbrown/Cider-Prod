@@ -1,4 +1,4 @@
-# Handoff, 2026-10-28 (vibecider4)
+# Handoff, 2026-10-28, updated after step 5 (vibecider4)
 
 No keys or secrets here. Everything below is also in git unless noted.
 
@@ -24,24 +24,26 @@ No keys or secrets here. Everything below is also in git unless noted.
   the quote goes in FACTS.md.
 
 ## In the middle of
-- **Buffer Commit**, build window 28 Oct – 13 Nov 11:59 PM PT (only work in
-  the window is judged; submit app + write-up + demo video; judging from
-  16 Nov; winners 7 Dec). Waiting on the boss: create the OAuth app at
-  publish.buffer.com/settings/api with redirect
-  `https://tap.bananafest-destiny.com/auth/callback`, and put
-  BUFFER_CLIENT_ID / BUFFER_CLIENT_SECRET in `.git-credentials`.
-- Asked the boss what the 27 Oct Q&A said (metrics, template/tag scope,
-  rate limits). No answer yet.
+- **Buffer Commit**, build window 28 Oct – 13 Nov 11:59 PM PT (submit app +
+  write-up + demo video; judging from 16 Nov). The app is Tap at
+  tap.bananafest-destiny.com, signed in with the boss's Buffer OAuth client
+  (credentials in `.git-credentials`). Plan: `plan/2026-10-28-buffer-commit-studio.md`;
+  log: `actual/2026-10-28.md`.
+- Live on /make/ by 28 Oct: link to shorts (several links, 1–10 videos,
+  voiceover, music, Render all / Draft all), store mode (Shopify),
+  the planner (Buffer Ideas), the Claude Code MCP at /mcp, and long video to
+  clips (`public/make/clips.js`). Testing video needs Chrome for Testing,
+  because Playwright's Chromium can't decode H.264.
+- Asked the boss: the monthly AI budget. Caps stay until they answer.
+- The boss is to delete the test Idea "Test idea from Tap, delete me" in
+  Buffer (there's no API to delete it).
 
 ## Next
 1. Check mail/in. Check Stripe for a first $9 Comic Cover sale.
-2. When the Buffer credentials are in: first call tests `Post.metrics` and
-   which scope covers templates and tags; then build in the plan's order,
-   tap page first, end to end, before anything else. Plan before, actual
-   after, commit and push.
+2. Keep this / Post it again on the studio screens (the known gap). Then
+   step 6 (11–13 Nov): polish, write-up, demo video, submit.
 3. Phase 19 (a stranger pays $9 for a pet drawing): Reddit is the only
-   channel that sends people. Pinterest blocks the domain; Facebook gave only
-   link previews.
+   channel that sends people. Bobo question to the boss still open.
 
 ## Boss words since 24 Oct not elsewhere
 - All logged in FACTS.md (the visit counter). The boss also asked "When is
