@@ -38,6 +38,7 @@ $("writeBtn").onclick = async () => {
   try {
     const out = await call("/api/scripts", { page, count: +$("count").value });
     $("writeStatus").textContent = out.note && out.videos.length < +$("count").value ? out.note : "";
+    cards.length = 0;
     $("videos").replaceChildren(...out.videos.map(videoCard));
   } catch (err) { $("writeStatus").textContent = err.message; $("writeStatus").className = "status small bad"; }
   $("writeBtn").disabled = false;
@@ -63,28 +64,106 @@ function videoCard(v, n) {
   const status = el("p", { className: "status small" });
   const renderBtn = el("button", { className: "primary", textContent: "Render" });
   const draftBox = el("div", { hidden: true });
+  const music = musicControls(v);
+  cards.push({ v, music });
   const side = el("div", {}, canvas, status, el("div", { className: "row" }, renderBtn), draftBox);
   const card = el("div", { className: "card" },
     el("div", { className: "small muted", textContent: `Video ${n + 1}: ${v.angle}` }),
     el("div", { className: "video" },
       el("div", {}, scenes, el("label", { className: "small muted", textContent: "Title (YouTube, TikTok)" }), title,
-        el("label", { className: "small muted", textContent: "Caption" }), caption),
+        el("label", { className: "small muted", textContent: "Caption" }), caption, music.box),
       side));
   drawStill(canvas, v);
 
   renderBtn.onclick = async () => {
     renderBtn.disabled = true; status.className = "status small";
     try {
+      side.querySelector("video")?.remove(); canvas.hidden = false; draftBox.replaceChildren(); draftBox.hidden = true;
       const mp4 = await render(canvas, v, p => status.textContent = `Rendering… ${Math.round(p * 100)}%`);
-      const video = el("video", { src: URL.createObjectURL(mp4), controls: true, playsInline: true, muted: true });
-      canvas.replaceWith(video);
-      status.textContent = `${(mp4.size / 1048576).toFixed(1)} MB${mp4.vp9 ? ", VP9 (this browser can't make H.264; some networks may refuse it, and Chrome makes H.264)" : ""}. `;
+      const video = el("video", { src: URL.createObjectURL(mp4), controls: true, playsInline: true });
+      canvas.hidden = true; canvas.after(video);
+      const notes = [mp4.vp9 && "VP9 (this browser can't make H.264; some networks may refuse it, and Chrome makes H.264)", mp4.opus && "music as Opus (this browser can't make AAC; some networks may refuse it)"].filter(Boolean);
+      status.textContent = `${(mp4.size / 1048576).toFixed(1)} MB${notes.length ? ", " + notes.join(", ") : ""}. `;
       status.append(el("a", { href: video.src, download: `tap-video-${n + 1}.mp4`, textContent: "Download" }));
       await showDraft(draftBox, v, mp4);
-      renderBtn.remove();
-    } catch (err) { status.textContent = err.message; status.className = "status small bad"; renderBtn.disabled = false; }
+      renderBtn.textContent = "Render again";
+    } catch (err) { status.textContent = err.message; status.className = "status small bad"; }
+    renderBtn.disabled = false;
   };
   return card;
+}
+
+// ---- Music: a file from the visitor's device, mixed in at render time --------
+
+const cards = [];
+const audioCtx = () => (audioCtx.c ??= new AudioContext());
+
+function musicControls(v) {
+  const file = el("input", { type: "file", accept: "audio/*,.mp3,.m4a,.wav,.aac,.ogg" });
+  const name = el("span", { className: "small muted" });
+  const start = el("input", { type: "number", min: 0, step: 1, value: 0, style: "width:5em", title: "Start the song this many seconds in" });
+  const vol = el("input", { type: "range", min: 5, max: 100, value: 80, title: "Volume" });
+  const clear = el("button", { type: "button", textContent: "Remove", hidden: true });
+  const all = el("button", { type: "button", textContent: "Use on every video", hidden: true });
+  const opts = el("div", { className: "row small", hidden: true }, el("label", {}, "Start at ", start, " s"), el("label", {}, "Volume ", vol), all, clear);
+  const set = (m, label) => {
+    v.music = m; name.textContent = label || ""; opts.hidden = !m; clear.hidden = !m; all.hidden = !m || cards.length < 2;
+    if (m) { start.value = m.start; vol.value = Math.round(m.volume * 100); } else file.value = "";
+  };
+  file.onchange = async () => {
+    const f = file.files[0]; if (!f) return;
+    name.textContent = "Reading the song…";
+    try {
+      if (f.size > 60 * 1048576) throw new Error("Pick a song file under 60 MB.");
+      const buffer = await audioCtx().decodeAudioData(await f.arrayBuffer());
+      set({ buffer, start: 0, volume: 0.8, name: f.name }, `${f.name} (${Math.round(buffer.duration)} s)`);
+    } catch (e) { set(null, e.message?.includes("60 MB") ? e.message : "That file couldn't be read as audio. Try an MP3, M4A or WAV."); }
+  };
+  start.oninput = () => v.music && (v.music.start = Math.max(0, +start.value || 0));
+  vol.oninput = () => v.music && (v.music.volume = +vol.value / 100);
+  clear.onclick = () => set(null);
+  all.onclick = () => cards.forEach(c => c.v !== v && c.music.set({ ...v.music }, `${v.music.name} (${Math.round(v.music.buffer.duration)} s)`));
+  const box = el("div", { style: "margin-top:10px" },
+    el("label", { className: "small muted", textContent: "Music (optional, a file from your device)" }), el("div", { className: "row" }, file, name), opts,
+    el("p", { className: "small muted", style: "margin:4px 0 0", textContent: "Use music you have the rights to. Networks can mute or block songs they recognise." }));
+  return { box, set };
+}
+
+// The song from its start point, cut to the video's length, faded in and out, as 48 kHz stereo.
+async function mixAudio(m, seconds) {
+  const rate = 48000, ctx = new OfflineAudioContext(2, Math.ceil(seconds * rate), rate);
+  const src = ctx.createBufferSource(); src.buffer = m.buffer;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(m.volume, 0.3);
+  g.gain.setValueAtTime(m.volume, Math.max(0.3, seconds - 1.5)); g.gain.linearRampToValueAtTime(0, seconds);
+  src.connect(g).connect(ctx.destination);
+  src.start(0, Math.min(m.start, Math.max(0, m.buffer.duration - 1)));
+  return ctx.startRendering();
+}
+
+async function pickAudioCodec() {
+  if (!("AudioEncoder" in window)) throw new Error("This browser can't encode audio. Use Chrome or Edge, or remove the music.");
+  for (const [codec, mux] of [["mp4a.40.2", "aac"], ["opus", "opus"]]) {
+    const config = { codec, sampleRate: 48000, numberOfChannels: 2, bitrate: 160_000 };
+    if ((await AudioEncoder.isConfigSupported(config).catch(() => ({}))).supported) return { config, mux };
+  }
+  throw new Error("This browser can't encode audio. Use Chrome or Edge, or remove the music.");
+}
+
+async function encodeAudio(muxer, audio, config) {
+  let failed = null;
+  const enc = new AudioEncoder({ output: (chunk, meta) => muxer.addAudioChunk(chunk, meta), error: e => failed = e });
+  enc.configure(config);
+  const step = 4800, chans = [audio.getChannelData(0), audio.getChannelData(1)];
+  for (let i = 0; i < audio.length; i += step) {
+    const n = Math.min(step, audio.length - i), data = new Float32Array(n * 2);
+    data.set(chans[0].subarray(i, i + n), 0); data.set(chans[1].subarray(i, i + n), n);
+    const a = new AudioData({ format: "f32-planar", sampleRate: 48000, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(i * 1e6 / 48000), data });
+    enc.encode(a); a.close();
+    if (failed) throw failed;
+  }
+  await enc.flush();
+  if (failed) throw failed;
 }
 
 async function showDraft(box, v, mp4) {
@@ -236,8 +315,10 @@ async function render(canvas, v, progress) {
   const ctx = canvas.getContext("2d");
   const bmps = await Promise.all(v.scenes.map(s => bitmap(s.image)));
   const tl = timeline(v), frames = Math.round(tl.total * FPS);
+  const sound = v.music && { ...(await pickAudioCodec()), audio: await mixAudio(v.music, frames / FPS) };
   const target = new ArrayBufferTarget();
-  const muxer = new Muxer({ target, video: { codec: mux, width: W, height: H, frameRate: FPS }, fastStart: "in-memory" });
+  const muxer = new Muxer({ target, video: { codec: mux, width: W, height: H, frameRate: FPS },
+    ...(sound && { audio: { codec: sound.mux, sampleRate: 48000, numberOfChannels: 2 } }), fastStart: "in-memory" });
   let failed = null;
   const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => failed = e });
   enc.configure(config);
@@ -252,9 +333,10 @@ async function render(canvas, v, progress) {
   }
   await enc.flush();
   if (failed) throw failed;
+  if (sound) await encodeAudio(muxer, sound.audio, sound.config);
   muxer.finalize();
   progress(1);
   const blob = new Blob([target.buffer], { type: "video/mp4" });
-  blob.vp9 = mux === "vp9";
+  blob.vp9 = mux === "vp9"; blob.opus = sound?.mux === "opus";
   return blob;
 }
