@@ -287,3 +287,13 @@ gift ideas". Posts should show the thing, not offer the service.
 - Buffer account is on Free: 250 API requests a day per client. The build
   caches and refreshes at most once a day per user.
 - Instagram links for my pages go to the page directly, never docent's /ig.
+
+## 28 Oct: Tap has no data to show
+The boss's bios send almost nobody ("once or twice over months"), so Tap's
+bio page would show zeros in the demo. The boss also judges it too simple
+to place, and "which post did you see" is self-report, which they don't
+trust to be precise. Buffer won't give us metrics (insights:read refused).
+What Buffer does give us, and what worked first time, is writing: drafts
+with video on every network, templates, tags, ideas. An entry should stand
+on that, and on data that already exists, not on traffic the boss doesn't
+have.
