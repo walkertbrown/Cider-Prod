@@ -27,6 +27,20 @@ client that already works. It makes the content and puts it into Buffer:
    drafts, or as Ideas for the ones still to make.
 5. **Keep this / Post it again**, from Tap, carried over: a template and a
    tag per winner, and drafts again on other networks.
+6. **An MCP server for building in public** (the boss, 28 Oct: "a Claude
+   mcp that creates videos based on what you're building"). It's a remote
+   MCP at tap.bananafest-destiny.com/mcp, added in one line
+   (`claude mcp add --transport http tap <url> --header "Authorization:
+   Bearer <tap key>"`). The key comes from the user's Tap page. Claude
+   already sees the repo, so it passes what shipped (title, what changed,
+   the numbers, screenshots or a live URL) to a tool like
+   `make_build_video`. Tap writes the script and returns a review link. The
+   video renders in the browser on that page, and one press drafts it to
+   Buffer. A person always approves, so nothing posts from an agent alone.
+   Other tools: `list_channels`, `draft_post` (text), `queue_status`. Our own
+   bots use it every day of the window, so the Build-in-Public entry is
+   built in public with itself, and the demo shows Claude Code making the
+   video of the work it just did.
 
 Tap's bio page and counted links stay live, as an extra and not the pitch.
 
@@ -53,9 +67,11 @@ Tap's bio page and counted links stay live, as an extra and not the pitch.
    TikTok, Shorts, plus text versions for X, Bluesky, Threads and LinkedIn
    if connected). One press drafts them all, tagged per video. Then
    voiceover (text-to-speech, mixed into the MP4).
-3. **4–5 Nov: store mode.** products.json → a short per product, in a
-   batch.
-4. **6–7 Nov: planner.** A month laid out, filled into the queue as drafts
+3. **4–5 Nov: the MCP server.** Tap keys on /me, the /mcp endpoint
+   (Streamable HTTP), the review link, and the drafts. From then on our bots
+   use it for their own build-in-public posts.
+4. **6–7 Nov: store mode and planner.** products.json → a short for each
+   product, in a batch. A month laid out, filled into the queue as drafts
    or Ideas. Keep this / Post it again join the same screens.
 5. **8–10 Nov: long video to clips.** The hardest part. If it slips, the
    entry is complete without it.
