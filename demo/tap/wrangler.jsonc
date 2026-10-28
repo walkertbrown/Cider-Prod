@@ -1,0 +1,7 @@
+// Tap: which of your Buffer posts sent people. Buffer Commit, 28 Oct – 13 Nov.
+{
+  "name": "tap",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public" },
+  "routes": [{ "pattern": "tap.bananafest-destiny.com", "custom_domain": true }]
+}
