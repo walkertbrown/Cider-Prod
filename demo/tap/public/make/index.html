@@ -37,11 +37,12 @@ label.ch{display:inline-flex;gap:6px;align-items:center;margin:4px 12px 4px 0}
 <body><main>
 <a href="/me">Tap</a>
 <h1>Make shorts from a link</h1>
-<p class="muted">Paste a page: a product, an app, an article, a listing. Tap reads it, writes short vertical videos from what's on it, renders them here in your browser, and puts them into Buffer as drafts. Nothing is posted until you post it.</p>
+<p class="muted">Paste a page, or a few: a product, an app, an article, a listing. Tap reads it, writes short vertical videos from what's on it, renders them here in your browser, and puts them into Buffer as drafts. Nothing is posted until you post it.</p>
 
-<form id="readForm" class="row">
-  <input type="url" id="url" placeholder="https://…" required>
-  <button class="primary" id="readBtn">Read the page</button>
+<form id="readForm">
+  <textarea id="url" rows="3" placeholder="https://your-site.com&#10;https://your-site.com/a-feature" required></textarea>
+  <p class="small muted" style="margin:4px 0 8px">One link per line, up to 5. Put the main page first: the videos send people there. Feature pages give them more to talk about.</p>
+  <button class="primary" id="readBtn">Read the pages</button>
 </form>
 <p class="status small" id="readStatus"></p>
 
@@ -49,6 +50,7 @@ label.ch{display:inline-flex;gap:6px;align-items:center;margin:4px 12px 4px 0}
   <div class="card">
     <strong id="pTitle"></strong>
     <div class="small muted" id="pHost"></div>
+    <ul class="small muted" id="pPages" style="margin:4px 0"></ul>
     <div class="strip" id="pImgs"></div>
     <div class="row" style="margin-top:10px">
       <label for="count">How many videos</label>

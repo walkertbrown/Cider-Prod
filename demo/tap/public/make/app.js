@@ -18,14 +18,16 @@ let page = null, channels = null;
 
 $("readForm").onsubmit = async e => {
   e.preventDefault();
-  $("readBtn").disabled = true; $("readStatus").textContent = "Reading…"; $("pageBox").hidden = true;
+  $("readBtn").disabled = true; $("readStatus").textContent = "Reading…"; $("readStatus").className = "status small"; $("pageBox").hidden = true;
   try {
-    page = await call("/api/read", { url: $("url").value });
+    page = await call("/api/read", { urls: $("url").value.split(/\s+/).filter(Boolean) });
     $("pTitle").textContent = page.title || page.host;
     $("pHost").textContent = page.host;
+    $("pPages").replaceChildren(...(page.pages.length > 1 ? page.pages.map(p => el("li", { textContent: p.title || p.url })) : []),
+      ...page.failed.map(f => el("li", { className: "bad", textContent: f })));
     $("pImgs").replaceChildren(...page.images.map(u => el("img", { src: img(u), alt: "", loading: "lazy", onerror() { this.remove(); } })));
     $("count").replaceChildren(...Array.from({ length: 10 }, (_, i) => el("option", { value: i + 1, textContent: i + 1, selected: i + 1 === page.suggested })));
-    $("pWhy").textContent = `Suggested: ${page.suggested}. The page has ${page.why}. More than that gets you different angles on the same material.`;
+    $("pWhy").textContent = `Suggested: ${page.suggested}. ${page.pages.length > 1 ? `The ${page.pages.length} pages have` : "The page has"} ${page.why}. More than that gets you different angles on the same material.`;
     $("pageBox").hidden = false; $("readStatus").textContent = "";
   } catch (err) { $("readStatus").textContent = err.message; $("readStatus").className = "status small bad"; }
   $("readBtn").disabled = false;

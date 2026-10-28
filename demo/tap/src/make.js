@@ -1,6 +1,6 @@
 // Link to Shorts: read a page, write scripts, host the videos the browser
 // renders, and draft them into Buffer.
-//   POST /api/read     {url} → the page's title, text, images, and a suggested count
+//   POST /api/read     {urls} (1–5) → the pages' titles, text, images, and a suggested count
 //   POST /api/scripts  {page, count} → video scripts (language model, capped)
 //   GET  /api/img?u=   an image from the page, re-served so the canvas can encode it
 //   PUT  /api/upload   an MP4 from the browser → {id, url}
@@ -71,12 +71,31 @@ export async function readPage(url) {
     if (src && !src.startsWith("data:") && w >= 200) addImg(src);
     if (imgs.length >= 16) break;
   }
+  return { url: r.url, host: base.hostname.replace(/^www\./, ""), title, description, blocks, images: imgs, products: jsonLdProducts(html) };
+}
+
+// Several pages read as one source: the first is the main page (its address goes on the
+// end card); lines repeated across pages (menus, footers) count once.
+export async function readPages(urls) {
+  const read = await Promise.all(urls.map(u => readPage(u).catch(e => ({ error: `Couldn't read it: ${e.message}` }))));
+  const ok = read.filter(p => !p.error);
+  const failed = urls.map((u, i) => read[i].error ? `${u.hostname}${u.pathname}: ${read[i].error}` : "").filter(Boolean);
+  if (!ok.length) return { error: failed.join(" ") };
+  const seen = new Set(), budget = Math.floor(12000 / ok.length);
+  const sections = ok.map(p => {
+    const fresh = p.blocks.filter(b => !seen.has(b) && seen.add(b));
+    let text = ""; for (const b of fresh) { if (text.length + b.length > budget) break; text += b + "\n"; }
+    return { fresh, text: `# Page: ${p.title} (${p.url})\n${p.description ? p.description + "\n" : ""}${text}` };
+  });
+  const images = [...new Set(ok.flatMap(p => p.images))].slice(0, 24);
   // How much there is to say: separate substantial statements, and how many carry a number.
-  const points = blocks.filter(b => !b.startsWith("## ") && b.split(" ").length >= 10);
+  const points = sections.flatMap(x => x.fresh).filter(b => !b.startsWith("## ") && b.split(" ").length >= 10);
   const withNumbers = points.filter(b => /\d/.test(b)).length;
-  const suggested = Math.max(1, Math.min(8, Math.round(points.length / 4 + withNumbers / 6)));
-  const why = `${points.length} substantial point${points.length === 1 ? "" : "s"}${withNumbers ? ` (${withNumbers} with numbers)` : ""} and ${imgs.length} image${imgs.length === 1 ? "" : "s"}`;
-  return { url: r.url, host: base.hostname.replace(/^www\./, ""), title, description, text, images: imgs, products: jsonLdProducts(html), suggested, why };
+  const suggested = Math.max(1, Math.min(10, Math.round(points.length / 4 + withNumbers / 6)));
+  const why = `${points.length} substantial point${points.length === 1 ? "" : "s"}${withNumbers ? ` (${withNumbers} with numbers)` : ""} and ${images.length} image${images.length === 1 ? "" : "s"}`;
+  const main = ok[0];
+  return { url: main.url, host: main.host, title: main.title, description: main.description, pages: ok.map(p => ({ url: p.url, title: p.title })),
+    text: sections.map(x => x.text).join("\n"), images, products: ok.flatMap(p => p.products).slice(0, 10), suggested, why, failed };
 }
 
 // ---- Scripts ---------------------------------------------------------------
@@ -89,6 +108,7 @@ Rules:
 - Each video takes a different angle (a different fact, feature, use or audience). If there isn't enough on the page for distinct angles, return fewer videos and say why in "note".
 - On-screen lines are at most 12 words, plain words, no hashtags, no emoji.
 - The last scene is the call to action and names the site (the host given).
+- The text may come from several pages of one site: the first is the main page, the others are feature or detail pages. Use the feature pages for angles, and send people to the main site.
 - seconds per scene: 2.5 to 5, longer for longer lines.
 - caption: the post text for the networks, 1 to 3 short sentences plus the site address, at most 300 characters. title: at most 90 characters, for YouTube.
 Return JSON only: {"note": string, "videos": [{"angle": string, "title": string, "caption": string, "scenes": [{"text": string, "image": integer or null, "seconds": number}]}]}`;
@@ -96,7 +116,7 @@ Return JSON only: {"note": string, "videos": [{"angle": string, "title": string,
 async function writeScripts(env, page, count) {
   const input = `Host: ${page.host}\nURL: ${page.url}\nTitle: ${page.title}\nDescription: ${page.description}\n` +
     (page.products?.length ? `Products: ${JSON.stringify(page.products)}\n` : "") +
-    `Images (index: url): ${page.images.map((u, i) => `${i}: ${u.split("/").pop().slice(0, 60)}`).join("; ") || "none"}\n\nPage text:\n${page.text}\n\nWrite ${count} video${count === 1 ? "" : "s"}.`;
+    `Images (index: url): ${page.images.map((u, i) => `${i}: ${u.split("/").pop().slice(0, 60)}`).join("; ") || "none"}\n\nPage text:\n${String(page.text || "").slice(0, 14000)}\n\nWrite ${count} video${count === 1 ? "" : "s"}.`;
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
@@ -158,9 +178,14 @@ export async function serveVideo(env, req, id) {
 export async function api(req, env, path, { acct, user }, d) {
   const url = new URL(req.url);
   if (path === "/api/read" && req.method === "POST") {
-    const u = safeHttp((await req.json().catch(() => ({}))).url);
-    if (!u) return json({ error: "That isn't a web address." }, 400);
-    try { const page = await readPage(u); return json(page, page.error ? 422 : 200); }
+    const body = await req.json().catch(() => ({}));
+    const raw = [].concat(body.urls || body.url || []).map(String).filter(x => x.trim());
+    const urls = raw.map(safeHttp);
+    if (!urls.length) return json({ error: "Paste a web address." }, 400);
+    if (urls.length > 5) return json({ error: "Up to 5 links at a time." }, 400);
+    const bad = raw.find((x, i) => !urls[i]);
+    if (bad) return json({ error: `That isn't a web address: ${bad.slice(0, 80)}` }, 400);
+    try { const page = await readPages(urls); return json(page, page.error ? 422 : 200); }
     catch (e) { return json({ error: `Couldn't read the page: ${e.message}` }, 422); }
   }
   if (path === "/api/scripts" && req.method === "POST") {
