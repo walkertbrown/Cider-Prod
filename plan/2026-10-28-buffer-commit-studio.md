@@ -15,6 +15,13 @@ client that already works. It makes the content and puts it into Buffer:
    point, the link), and renders vertical 1080×1920 videos in the user's own
    browser from the page's images, with captions and an optional voiceover.
    You preview them and draft them into Buffer for each network.
+   **How many** is the user's choice (1 to 10). The app suggests a number
+   from how much the page has (separate facts, features, numbers, images)
+   and says why ("this page has 4 distinct points and 6 images: 4
+   videos"). Asking for more than the page supports gets angles, not
+   repeats, and a warning when they'd overlap. (The boss, 28 Oct: "set how
+   many videos you want made from the link... It depends on how much
+   information is at the link".)
 2. **Store mode.** Paste a store (Shopify's products.json to start) and
    every product becomes its own short. That's the judge's Pokémon-card
    case.
@@ -100,3 +107,17 @@ Tap's bio page and counted links stay live, as an extra and not the pitch.
   and fix the render settings to fit each network's limits.
 - The OAuth client and consent screen are named "Tap". The name may change
   (the boss's call, in Buffer's app settings).
+
+## Step 1 details (28–31 Oct)
+- Scripts: OpenAI gpt-5.4-mini returning JSON; voiceover later with
+  gpt-4o-mini-tts. Only signed-in Buffer users can call it. Caps until the
+  boss sets a budget: 20 script runs a day per account, 200 a day overall.
+- Page images go through Tap (/api/img), because a canvas with images from
+  another site can't be encoded.
+- Render: canvas 1080×1920 at 30 fps, WebCodecs H.264, and the mp4-muxer
+  library from jsDelivr. Each scene is an image with a slow pan, the caption
+  in big type a few words at a time, then an end card with the link.
+- Upload: PUT to Tap, kept in KV (25 MB a value) and served at
+  /v/<id>.mp4. Kept 30 days.
+- Draft: one createPost per channel the user ticks, using the network
+  fields already proven.
