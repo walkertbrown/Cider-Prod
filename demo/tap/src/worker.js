@@ -11,8 +11,12 @@
 //   GET  /p/<name>/<post> count a tap, then send the visitor on
 //   GET  /go/<name>       the bio page's skip link, counted the same way
 //   GET  /t/<name>/<post> the post's thumbnail, fetched from Buffer and cached here
+//   /make, /api/*, /v/<id>.mp4  Link to Shorts (src/make.js)
 // KV: tok:<acct> tokens · user:<acct> posts and settings · name:<name> → acct
 //     ses:<sid> → acct · n:<acct>:<post> {p, f} counts. Visitors get no cookie.
+//     v:<id> a rendered MP4 (30 days) · cap:<day>:<acct|all> script runs
+
+import { api, serveVideo } from "./make.js";
 
 const HOME = "https://tap.bananafest-destiny.com";
 const REDIRECT = HOME + "/auth/callback";
@@ -286,6 +290,7 @@ ${kept.has(p.id) ? '<span class="note">Kept</span>' : `<button class="small" for
   return page("Your posts", `
 <a href="/">Tap</a>
 <h1>Your posts</h1>
+<p><a class="primary" href="/make/" style="display:inline-block;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:600">Make shorts from a link</a></p>
 ${error ? `<p class="note" style="color:#c0392b">Couldn't refresh from Buffer: ${esc(error)} ${error.includes("Sign in") ? '<a href="/auth/start">Sign in</a>' : ""}</p>` : ""}
 <p>Your bio link: <a href="${bio}"><b>${bio}</b></a><br><span class="note">Put it in your Instagram, TikTok or YouTube bio. Visitors pick the post they saw, and Tap counts it before sending them on.</span></p>
 ${flash ? `<p class="flash">${esc(flash)}</p>` : ""}
@@ -434,7 +439,7 @@ async function save(req, env, { acct, user }) {
 }
 
 async function disconnect(env, { acct, user }) {
-  const keys = [`tok:${acct}`, `user:${acct}`, `name:${user.name}`, ...(user.sessions || []).map(s => `ses:${s}`)];
+  const keys = [`tok:${acct}`, `user:${acct}`, `name:${user.name}`, ...(user.sessions || []).map(s => `ses:${s}`), ...(user.videos || []).map(v => `v:${v.id}`)];
   let cursor;
   do {
     const l = await env.TAP.list({ prefix: `n:${acct}:`, cursor });
@@ -442,7 +447,7 @@ async function disconnect(env, { acct, user }) {
     cursor = l.list_complete ? null : l.cursor;
   } while (cursor);
   await Promise.all(keys.map(k => env.TAP.delete(k)));
-  return page("Disconnected", `<a href="/">Tap</a><h1>Disconnected</h1><p>Everything Tap kept for this account is deleted: the Buffer access, the copy of your posts, the counts and the bio link. To remove Tap from Buffer's side too, open your Buffer settings, then Apps.</p>`,
+  return page("Disconnected", `<a href="/">Tap</a><h1>Disconnected</h1><p>Everything Tap kept for this account is deleted: the Buffer access, the copy of your posts, the counts, the bio link and the videos you made. To remove Tap from Buffer's side too, open your Buffer settings, then Apps.</p>`,
     { headers: { "set-cookie": "tap_sid=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax" } });
 }
 
@@ -455,6 +460,16 @@ export default {
     let m;
     if ((m = path.match(/^\/p\/([a-z0-9]+)\/([a-z0-9]+)$/))) return tap(env, ctx, req, m[1], m[2]);
     if ((m = path.match(/^\/t\/([a-z0-9]+)\/([a-z0-9]+)$/))) return thumb(env, m[1], m[2]);
+    if ((m = path.match(/^\/v\/([A-Za-z0-9]+)\.mp4$/))) return serveVideo(env, req, m[1]);
+    if (path.startsWith("/api/")) {
+      const o = await owner(req, env);
+      if (!o) return new Response(JSON.stringify({ error: "Sign in with Buffer first." }), { status: 401, headers: { "content-type": "application/json" } });
+      if (req.method !== "GET" && req.headers.get("origin") !== HOME) return new Response("Forbidden", { status: 403 });
+      return api(req, env, path, o, { rand, putJSON, refreshPosts, accessToken, gql, errText });
+    }
+    if (path === "/make" || path === "/make/") {
+      if (!await owner(req, env)) return Response.redirect(`${HOME}/auth/start`, 302);
+    }
     if ((m = path.match(/^\/go\/([a-z0-9]+)$/))) return tap(env, ctx, req, m[1], null);
     if ((m = path.match(/^\/u\/([a-z0-9]+)$/))) {
       const acct = await env.TAP.get(`name:${m[1]}`);

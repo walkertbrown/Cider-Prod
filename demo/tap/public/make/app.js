@@ -1,0 +1,258 @@
+// Link to Shorts, the browser half: read → scripts → render (canvas, WebCodecs, MP4) → upload → draft.
+import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs";
+
+const W = 1080, H = 1920, FPS = 30, END = 2.5;
+const $ = id => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+const img = u => `/api/img?u=${encodeURIComponent(u)}`;
+
+async function call(path, body, method = "POST") {
+  const r = await fetch(path, { method, headers: { "content-type": "application/json" }, body: body && JSON.stringify(body) });
+  const d = await r.json().catch(() => ({ error: `Tap answered ${r.status}.` }));
+  if (r.status === 401) location.href = "/auth/start";
+  if (!r.ok || d.error) throw new Error(d.error || `Tap answered ${r.status}.`);
+  return d;
+}
+
+let page = null, channels = null;
+
+$("readForm").onsubmit = async e => {
+  e.preventDefault();
+  $("readBtn").disabled = true; $("readStatus").textContent = "Reading…"; $("pageBox").hidden = true;
+  try {
+    page = await call("/api/read", { url: $("url").value });
+    $("pTitle").textContent = page.title || page.host;
+    $("pHost").textContent = page.host;
+    $("pImgs").replaceChildren(...page.images.map(u => el("img", { src: img(u), alt: "", loading: "lazy", onerror() { this.remove(); } })));
+    $("count").replaceChildren(...Array.from({ length: 10 }, (_, i) => el("option", { value: i + 1, textContent: i + 1, selected: i + 1 === page.suggested })));
+    $("pWhy").textContent = `Suggested: ${page.suggested}. The page has ${page.why}. More than that gets you different angles on the same material.`;
+    $("pageBox").hidden = false; $("readStatus").textContent = "";
+  } catch (err) { $("readStatus").textContent = err.message; $("readStatus").className = "status small bad"; }
+  $("readBtn").disabled = false;
+};
+
+$("writeBtn").onclick = async () => {
+  $("writeBtn").disabled = true; $("writeStatus").textContent = "Writing scripts… (about 10–30 seconds)"; $("writeStatus").className = "status small";
+  try {
+    const out = await call("/api/scripts", { page, count: +$("count").value });
+    $("writeStatus").textContent = out.note && out.videos.length < +$("count").value ? out.note : "";
+    $("videos").replaceChildren(...out.videos.map(videoCard));
+  } catch (err) { $("writeStatus").textContent = err.message; $("writeStatus").className = "status small bad"; }
+  $("writeBtn").disabled = false;
+};
+
+// ---- One video's card: editable script, render, preview, draft --------------
+
+function videoCard(v, n) {
+  const scenes = el("div");
+  const sceneRow = s => {
+    const thumb = s.image == null ? el("div", { className: "noimg" }) : el("img", { src: img(page.images[s.image]), alt: "" });
+    const text = el("textarea", { value: s.text, rows: 2, oninput() { s.text = this.value; } });
+    const pick = el("select", { title: "Image", onchange() { s.image = this.value === "" ? null : +this.value;
+      const t = s.image == null ? el("div", { className: "noimg" }) : el("img", { src: img(page.images[s.image]), alt: "" }); row.firstChild.replaceWith(t); } },
+      el("option", { value: "", textContent: "none" }), ...page.images.map((_, i) => el("option", { value: i, textContent: `image ${i + 1}`, selected: s.image === i })));
+    const row = el("div", { className: "scene" }, thumb, text, pick);
+    return row;
+  };
+  scenes.append(...v.scenes.map(sceneRow));
+  const title = el("input", { type: "text", value: v.title, maxLength: 100, oninput() { v.title = this.value; } });
+  const caption = el("textarea", { value: v.caption, rows: 3, oninput() { v.caption = this.value; } });
+  const canvas = el("canvas", { width: W, height: H, className: "preview" });
+  const status = el("p", { className: "status small" });
+  const renderBtn = el("button", { className: "primary", textContent: "Render" });
+  const draftBox = el("div", { hidden: true });
+  const side = el("div", {}, canvas, status, el("div", { className: "row" }, renderBtn), draftBox);
+  const card = el("div", { className: "card" },
+    el("div", { className: "small muted", textContent: `Video ${n + 1}: ${v.angle}` }),
+    el("div", { className: "video" },
+      el("div", {}, scenes, el("label", { className: "small muted", textContent: "Title (YouTube, TikTok)" }), title,
+        el("label", { className: "small muted", textContent: "Caption" }), caption),
+      side));
+  drawStill(canvas, v);
+
+  renderBtn.onclick = async () => {
+    renderBtn.disabled = true; status.className = "status small";
+    try {
+      const mp4 = await render(canvas, v, p => status.textContent = `Rendering… ${Math.round(p * 100)}%`);
+      const video = el("video", { src: URL.createObjectURL(mp4), controls: true, playsInline: true, muted: true });
+      canvas.replaceWith(video);
+      status.textContent = `${(mp4.size / 1048576).toFixed(1)} MB${mp4.vp9 ? ", VP9 (this browser can't make H.264; some networks may refuse it, and Chrome makes H.264)" : ""}. `;
+      status.append(el("a", { href: video.src, download: `tap-video-${n + 1}.mp4`, textContent: "Download" }));
+      await showDraft(draftBox, v, mp4);
+      renderBtn.remove();
+    } catch (err) { status.textContent = err.message; status.className = "status small bad"; renderBtn.disabled = false; }
+  };
+  return card;
+}
+
+async function showDraft(box, v, mp4) {
+  channels ??= (await call("/api/channels", null, "GET")).channels;
+  if (!channels.length) { box.append(el("p", { className: "small muted", textContent: "No Buffer channels that take video are connected." })); box.hidden = false; return; }
+  const ticks = channels.map(c => el("input", { type: "checkbox", value: c.id, checked: ["instagram", "tiktok", "youtube"].includes(c.service) }));
+  const btn = el("button", { className: "primary", textContent: "Draft to Buffer" });
+  const out = el("p", { className: "status small" });
+  box.append(el("p", { className: "small", style: "margin:10px 0 4px", textContent: "Draft it to:" }),
+    ...channels.map((c, i) => el("label", { className: "ch" }, ticks[i], c.service)), el("div", { className: "row" }, btn), out);
+  box.hidden = false;
+  let uploaded = null;
+  btn.onclick = async () => {
+    const chosen = ticks.filter(t => t.checked).map(t => t.value);
+    if (!chosen.length) { out.textContent = "Pick at least one channel."; return; }
+    btn.disabled = true; out.className = "status small";
+    try {
+      if (!uploaded) {
+        out.textContent = "Uploading…";
+        const r = await fetch("/api/upload", { method: "PUT", headers: { "content-type": "video/mp4" }, body: mp4 });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || `Upload failed (${r.status}).`);
+        uploaded = d.id;
+      }
+      out.textContent = "Drafting…";
+      const { results } = await call("/api/draft", { video: uploaded, channels: chosen, caption: v.caption, title: v.title });
+      out.replaceChildren(...results.map(r => el("div", { className: r.ok ? "" : "bad", textContent: r.ok ? `${r.channel}: in your Buffer drafts` : `${r.channel}: ${r.error}` })));
+      if (results.some(r => !r.ok)) btn.disabled = false;
+    } catch (err) { out.textContent = err.message; out.className = "status small bad"; btn.disabled = false; }
+  };
+}
+
+// ---- Rendering -------------------------------------------------------------
+
+const bitmaps = new Map();
+async function bitmap(i) {
+  if (i == null) return null;
+  if (!bitmaps.has(i)) bitmaps.set(i, fetch(img(page.images[i])).then(r => r.ok ? r.blob() : null).then(b => b && createImageBitmap(b)).catch(() => null));
+  return bitmaps.get(i);
+}
+
+// Words grouped into caption chunks of up to 4 words (or ~22 characters).
+function chunks(text) {
+  const out = []; let cur = [];
+  for (const w of text.split(/\s+/).filter(Boolean)) {
+    if (cur.length && (cur.length >= 4 || (cur.join(" ") + " " + w).length > 22)) { out.push(cur.join(" ")); cur = []; }
+    cur.push(w);
+  }
+  if (cur.length) out.push(cur.join(" "));
+  return out.length ? out : [""];
+}
+
+function wrap(ctx, text, max) {
+  const lines = []; let line = "";
+  for (const w of text.split(" ")) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > max && line) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function background(ctx, bmp, t, seed) {
+  ctx.fillStyle = "#15140f"; ctx.fillRect(0, 0, W, H);
+  if (!bmp) {
+    const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#2a261b"); g.addColorStop(1, "#15140f");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); return;
+  }
+  // Fill the frame (cover), then a slow zoom and drift; direction alternates by scene.
+  const z = 1.06 + 0.10 * t, dir = seed % 2 ? 1 : -1;
+  const s = Math.max(W / bmp.width, H / bmp.height) * z;
+  const w = bmp.width * s, h = bmp.height * s;
+  const x = (W - w) / 2 + dir * (t - 0.5) * Math.min(80, (w - W) / 2), y = (H - h) / 2;
+  // A blurred copy behind, so a wide image never leaves bars.
+  ctx.filter = "blur(40px) brightness(0.6)";
+  const sb = Math.max(W / bmp.width, H / bmp.height) * 1.2;
+  ctx.drawImage(bmp, (W - bmp.width * sb) / 2, (H - bmp.height * sb) / 2, bmp.width * sb, bmp.height * sb);
+  ctx.filter = "none";
+  ctx.drawImage(bmp, x, y, w, h);
+  const g = ctx.createLinearGradient(0, H * 0.45, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.75)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+
+function caption(ctx, text, appear) {
+  ctx.font = "800 104px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const lines = wrap(ctx, text.toUpperCase(), W - 140);
+  const lh = 122, y0 = H * 0.66 - (lines.length - 1) * lh / 2;
+  const k = Math.min(1, appear * 6), sc = 0.9 + 0.1 * k;
+  ctx.save(); ctx.globalAlpha = k; ctx.translate(W / 2, 0); ctx.scale(sc, sc);
+  lines.forEach((l, i) => {
+    ctx.lineWidth = 14; ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.lineJoin = "round"; ctx.strokeText(l, 0, (y0 + i * lh) / sc);
+    ctx.fillStyle = i === 0 ? "#ffffff" : "#ffd75e"; ctx.fillText(l, 0, (y0 + i * lh) / sc);
+  });
+  ctx.restore();
+}
+
+// The largest font size (from max down) at which text fits in width.
+function fit(ctx, text, weight, max, width) {
+  let size = max;
+  do { ctx.font = `${weight} ${size}px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif`; size -= 4; } while (ctx.measureText(text).width > width && size > 28);
+  return size + 4;
+}
+
+function endCard(ctx, v, t) {
+  ctx.fillStyle = "#15140f"; ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.globalAlpha = Math.min(1, t * 4);
+  ctx.fillStyle = "#e8b830"; ctx.fillRect(W / 2 - 60, H * 0.40, 120, 10);
+  const u = new URL(page.url), path = u.pathname.replace(/\/$/, "");
+  const where = page.host + (path.length > 1 && path.length < 24 ? path : "");
+  const size = fit(ctx, where, 800, 110, W - 120);
+  ctx.fillStyle = "#efeadc"; ctx.fillText(where, W / 2, H * 0.48);
+  ctx.font = "500 52px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"; ctx.fillStyle = "#a59f8f";
+  wrap(ctx, (page.title || "").slice(0, 80), W - 200).slice(0, 2).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.48 + size / 2 + 70 + i * 64));
+  ctx.globalAlpha = 1;
+}
+
+function timeline(v) {
+  let at = 0;
+  const parts = v.scenes.map((s, i) => { const p = { s, i, from: at, to: at + s.seconds }; at += s.seconds; return p; });
+  return { parts, total: at + END };
+}
+
+function frame(ctx, v, tl, bmps, t) {
+  const p = tl.parts.find(p => t < p.to);
+  if (!p) return endCard(ctx, v, (t - (tl.total - END)) / END);
+  const local = (t - p.from) / (p.to - p.from);
+  background(ctx, bmps[p.i], local, p.i);
+  const cs = chunks(p.s.text), ci = Math.min(cs.length - 1, Math.floor(local * cs.length));
+  caption(ctx, cs[ci], local * cs.length - ci);
+}
+
+async function drawStill(canvas, v) {
+  const ctx = canvas.getContext("2d");
+  const bmps = await Promise.all(v.scenes.map(s => bitmap(s.image)));
+  frame(ctx, v, timeline(v), bmps, Math.min(1.2, v.scenes[0].seconds * 0.6));
+}
+
+async function pickCodec() {
+  if (!("VideoEncoder" in window)) throw new Error("This browser can't encode video. Use Chrome, Edge or a recent Safari.");
+  // H.264 is what every network takes. VP9 in MP4 is the fallback for browsers without it (some networks may refuse it).
+  for (const [codec, mux] of [["avc1.640028", "avc"], ["avc1.4d0028", "avc"], ["avc1.42002a", "avc"], ["vp09.00.40.08", "vp9"]]) {
+    const config = { codec, width: W, height: H, bitrate: 3_000_000, framerate: FPS, ...(mux === "avc" && { avc: { format: "avc" } }) };
+    if ((await VideoEncoder.isConfigSupported(config).catch(() => ({}))).supported) return { config, mux };
+  }
+  throw new Error("This browser can't encode video at 1080×1920. Use Chrome or Edge.");
+}
+
+async function render(canvas, v, progress) {
+  const { config, mux } = await pickCodec();
+  const ctx = canvas.getContext("2d");
+  const bmps = await Promise.all(v.scenes.map(s => bitmap(s.image)));
+  const tl = timeline(v), frames = Math.round(tl.total * FPS);
+  const target = new ArrayBufferTarget();
+  const muxer = new Muxer({ target, video: { codec: mux, width: W, height: H, frameRate: FPS }, fastStart: "in-memory" });
+  let failed = null;
+  const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => failed = e });
+  enc.configure(config);
+  for (let i = 0; i < frames; i++) {
+    if (failed) throw failed;
+    frame(ctx, v, tl, bmps, i / FPS);
+    const f = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    enc.encode(f, { keyFrame: i % (FPS * 2) === 0 });
+    f.close();
+    while (enc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 1));
+    if (i % 15 === 0) { progress(i / frames); await new Promise(r => setTimeout(r, 0)); }
+  }
+  await enc.flush();
+  if (failed) throw failed;
+  muxer.finalize();
+  progress(1);
+  const blob = new Blob([target.buffer], { type: "video/mp4" });
+  blob.vp9 = mux === "vp9";
+  return blob;
+}
