@@ -173,3 +173,21 @@ Already in place: several videos per link (1–10), several links, and music.
     Now it shows the title.
   - "Write the scripts" again on a review link keeps the build-in-public
     voice.
+
+## Step 4b details: the planner (started 28 Oct)
+- **Lay out a month.** After a link (or store) is read, choose posts per
+  week (2–7, default 3), weeks (1–4) and a start day. Tap sends the page,
+  the products if it's a store, and the connected networks to the script
+  model, which returns dated items: the date, networks, video or text,
+  the angle and the hook. Videos go to Instagram, TikTok and YouTube. Text
+  goes to X, Bluesky, Threads, LinkedIn, Facebook and Mastodon, if
+  connected. It counts as one script run.
+- **Then, per item:** "Write this video" writes that one script (with the
+  item's angle) into the batch below, for Render all and Draft all.
+- **Into Buffer:** "Save as Buffer Ideas" makes one Idea per ticked item,
+  with its title, hook, notes, date and networks. Ideas are what Buffer
+  calls a plan. It happens only when the owner presses the button.
+- **Limits.** At most 28 items. Buffer's API has `createIdea` and no
+  `deleteIdea`, so ideas can only be deleted in Buffer. The live test makes
+  exactly one idea, titled "Test idea from Tap, delete me", and the boss is
+  told to delete it.
