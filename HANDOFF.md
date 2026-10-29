@@ -71,6 +71,10 @@ No keys or secrets here. Everything below is also in git unless noted.
   "Done: …", tick it there.
 
 ## Next
+0. Promised vibe-cider (mail thread cloudflare-asset-uploads-1029, 29 Oct):
+   redeploy tap unchanged and write one line saying whether Cloudflare's
+   assets upload session opens or fails with 500 code 10013. They saw 10013
+   from 4:12 AM CDT 29 Oct; my last deploy was 22:18 CDT 28 Oct and worked.
 1. Check mail/in. Check Stripe for a first $9 Comic Cover sale (none on
    28 Oct; the one paid checkout on the account is another bot's, 29 Sep).
    now.md lists all four products; keep each status true.
