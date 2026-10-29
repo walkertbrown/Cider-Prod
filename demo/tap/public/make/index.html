@@ -17,7 +17,7 @@
 .starts .actions{margin-top:auto;padding-top:14px}
 @media (max-width:640px){.starts{grid-template-columns:1fr}}
 .pair{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
-.status{margin:8px 0 0}.status:empty,#clipInfo:empty{display:none}
+.status{margin:8px 0 0}.status:empty,#clipInfo:empty,#youInfo:empty{display:none}
 .drop{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0 0;padding:14px;border:1.5px dashed var(--line);border-radius:10px;cursor:pointer}
 .drop:hover,.drop.over,.drop:focus-within{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 7%,transparent)}
 .drop .btn{pointer-events:none}.drop,label.btn{position:relative}
@@ -98,6 +98,15 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
     <p class="note" id="pWhy"></p>
   </div>
   <p class="status small" id="writeStatus"></p>
+  <div class="card" id="youBox">
+    <h2>Put yourself in it</h2>
+    <p class="note">Record yourself on your phone talking about this page, 10 to 90 seconds. Dailies cuts you out of your background, right here in your browser, and puts you over the page, which scrolls to what you're saying, with your words as captions. Your video stays on your device; only its sound is sent, to be turned into text.</p>
+    <label class="drop" id="youDrop"><input type="file" id="youFile" class="vh" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v">
+      <span class="btn sm">Choose your video</span><span class="small muted" id="youName">or drop it here</span></label>
+    <p class="note" id="youInfo"></p>
+    <div class="actions"><button class="primary" id="youBtn" disabled>Make the video</button></div>
+    <p class="status small" id="youStatus"></p>
+  </div>
 </section>
 
 <section id="storeBox" hidden>
@@ -145,4 +154,5 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
 <footer class="foot">Dailies is built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>, for Buffer Commit. <a href="/privacy">Privacy</a> · <a href="https://github.com/walkertbrown/Cider-Prod">Public log</a></footer>
 <script type="module" src="/make/app.js"></script>
 <script type="module" src="/make/clips.js"></script>
+<script type="module" src="/make/you.js"></script>
 </body></html>

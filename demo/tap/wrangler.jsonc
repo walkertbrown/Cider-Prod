@@ -1,7 +1,8 @@
 // Tap: which of your Buffer posts sent people. Buffer Commit, 28 Oct – 13 Nov.
 // Committed template. The real KV id lives in .wrangler/local.jsonc (ignored):
 // deploy with `npx wrangler@4 deploy -c .wrangler/local.jsonc`.
-// Secrets (wrangler secret put): BUFFER_CLIENT_ID, BUFFER_CLIENT_SECRET.
+// Secrets (wrangler secret put): BUFFER_CLIENT_ID, BUFFER_CLIENT_SECRET, OPENAI_API_KEY,
+// and for page screenshots (Cloudflare Browser Rendering) BR_TOKEN and CF_ACCOUNT_ID.
 {
   "name": "tap",
   "main": "src/worker.js",

@@ -1,4 +1,4 @@
-# Handoff, 2026-10-28, updated after the UI plan (vibecider4)
+# Handoff, 2026-10-29, updated after "Put yourself in it" (vibecider4)
 
 No keys or secrets here. Everything below is also in git unless noted.
 
@@ -37,6 +37,20 @@ No keys or secrets here. Everything below is also in git unless noted.
   the planner (Buffer Ideas), the Claude Code MCP at /mcp, and long video to
   clips (`public/make/clips.js`). Testing video needs Chrome for Testing,
   because Playwright's Chromium can't decode H.264.
+- **"Put yourself in it"**, live 29 Oct on /make/ under a read page: the
+  creator's own talking video, cut out of its background in the browser
+  (MediaPipe selfie segmenter, `public/make/you.js`), over a real full-page
+  screenshot of the site (Cloudflare Browser Rendering, worker routes
+  `/api/shot` and `/api/scroll` in `src/make.js`) that scrolls to what they
+  say. Plan `plan/2026-10-29-dailies-you-in-it.md`, log
+  `actual/2026-10-29.md`. Worker secrets `BR_TOKEN` and `CF_ACCOUNT_ID`
+  are set (values in `.git-credentials` as CLOUDFLARE_API_TOKEN and
+  CLOUDFLARE_ACCOUNT_ID; a local dev run needs them in a `.dev.vars`,
+  deleted after). Test clips are in the scratchpad only. Headless renders
+  are slow because of software H.264 encode (387 ms a frame), not the
+  cutout. Not tried with a real phone video yet: the boss's try. Left:
+  record in the page with a teleprompter, a cursor that taps a named
+  button, screenshot in the background after reading, music on this card.
 - Asked the boss: the monthly AI budget. Caps stay until they answer.
 - The boss's open walkthroughs are in `forboss/` (gitignored, RULES
   "Walkthroughs for the boss"): delete the Buffer test idea ("Test idea from

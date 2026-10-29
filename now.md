@@ -7,7 +7,7 @@ since: 2026-10-15
 app: Dailies
 status: live, free, sign in with Buffer; being built for Buffer Commit (entry due 13 Nov); no users yet but the boss
 url: https://tap.bananafest-destiny.com
-blurb: Paste a link, a store or a long video and get vertical shorts, rendered in your browser and drafted into Buffer.
+blurb: Paste a link, a store or a long video and get vertical shorts, rendered in your browser and drafted into Buffer; or drop a video of yourself talking and be cut out of your room over your own page as it scrolls to what you say.
 since: 2026-10-28
 
 app: Comic Cover
@@ -22,4 +22,4 @@ url: https://vibecider.bananafest-destiny.com/roundrobin/
 blurb: Type the names and the number of courts and get a fair doubles schedule to print or share.
 since: 2026-10-17
 
-updated: 2026-10-28
+updated: 2026-10-29

@@ -45,7 +45,7 @@ async function open(file) {
     if (!t) return null;
     const trak = mp4.getTrackById(t.id), entry = trak.mdia.minf.stbl.stsd.entries[0];
     const elst = trak.edts?.elst?.entries?.find(e => e.media_time >= 0);
-    return { info: t, trak, entry, samples: trak.samples, shift: (elst?.media_time || 0) / t.timescale };
+    return { info: t, trak, entry, samples: trak.samples, shift: (elst?.media_time || 0) / t.timescale, file };
   };
   const video = track(info.videoTracks[0]), audio = track(info.audioTracks[0]);
   if (!video) throw new Error("There's no video track in that file.");
@@ -105,7 +105,7 @@ async function decode(t, kind, from, to, onOutput, between) {
   const dec = new Dec({ output: onOutput, error: e => failed = e });
   dec.configure(config);
   const Chunk = kind === "video" ? EncodedVideoChunk : EncodedAudioChunk;
-  for await (const [s, data] of readSamples(src.file, ss.slice(first, last))) {
+  for await (const [s, data] of readSamples(t.file, ss.slice(first, last))) {
     if (failed) throw failed;
     dec.decode(new Chunk({ type: s.is_sync || kind === "audio" ? "key" : "delta", timestamp: Math.round(time(t, s) * 1e6), duration: Math.round(s.duration * 1e6 / s.timescale), data }));
     while (dec.decodeQueueSize > 12) await new Promise(r => setTimeout(r, 1));
@@ -126,13 +126,13 @@ function wav(samples) {
   return out.buffer;
 }
 
-// The whole soundtrack, downmixed and box-filtered to 16 kHz mono, sent in 10-minute pieces.
-async function listen(progress) {
-  const a = src.audio;
+// The soundtrack up to `to`, downmixed and box-filtered to 16 kHz mono, sent in 10-minute pieces.
+async function listen(s, progress, to = s.duration) {
+  const a = s.audio;
   if (!a) throw new Error("This video has no sound, so there's nothing to pick moments from.");
   const ratio = a.info.audio.sample_rate / RATE, piece = new Float32Array(PIECE * RATE), ready = [], all = { words: [], segments: [] };
   let n = 0, sent = 0, sum = 0, cnt = 0, inPos = 0, next = ratio, t0 = null;
-  const pieces = Math.ceil(src.duration / PIECE);
+  const pieces = Math.ceil(to / PIECE);
   const send = async (samples, at) => {
     progress(`Listening… part ${++sent} of ${pieces}`);
     const r = await fetch("/api/transcribe", { method: "POST", headers: { "content-type": "audio/wav" }, body: wav(samples) });
@@ -141,7 +141,7 @@ async function listen(progress) {
     all.words.push(...d.words.map(w => ({ ...w, s: w.s + at, e: w.e + at })));
     all.segments.push(...d.segments.map(g => ({ ...g, s: g.s + at, e: g.e + at })));
   };
-  await decode(a, "audio", 0, src.duration, data => {
+  await decode(a, "audio", 0, to, data => {
     t0 ??= Math.max(0, data.timestamp / 1e6);
     const ch = data.numberOfChannels, len = data.numberOfFrames, planes = [];
     for (let c = 0; c < ch; c++) { const p = new Float32Array(len); data.copyTo(p, { planeIndex: c, format: "f32-planar" }); planes.push(p); }
@@ -165,8 +165,7 @@ async function listen(progress) {
 const small = Object.assign(document.createElement("canvas"), { width: 54, height: 96 });
 
 // Draw the frame, turned upright, into the box (x, y, w, h).
-function put(ctx, f, x, y, w, h) {
-  const r = src.rot;
+function put(ctx, f, x, y, w, h, r = src.rot) {
   ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(r * Math.PI / 180);
   const [dw, dh] = r % 180 ? [h, w] : [w, h];
   ctx.drawImage(f, -dw / 2, -dh / 2, dw, dh);
@@ -200,8 +199,8 @@ function drawFrame(ctx, f, clip, t) {
 }
 
 // The clip's words in caption chunks of up to 3 words, times relative to the clip.
-function lines(clip) {
-  const ws = words.filter(w => w.s >= clip.start - 0.05 && w.e <= clip.end + 0.3), out = [];
+function lines(clip, from = words) {
+  const ws = from.filter(w => w.s >= clip.start - 0.05 && w.e <= clip.end + 0.3), out = [];
   let cur = null;
   for (const w of ws) {
     const text = w.w.trim();
@@ -213,34 +212,36 @@ function lines(clip) {
 
 // ---- Rendering a clip ---------------------------------------------------------------
 
+// The source's sound between start and end, faded in and out, as 48 kHz stereo ready to encode; null if it has none.
+async function sound(s, start, end) {
+  if (!s.audio) return null;
+  const seconds = end - start, parts = [];
+  let rate = 48000, chans = 2;
+  await decode(s.audio, "audio", start - 0.5, end + 0.2, data => {
+    rate = data.sampleRate; chans = data.numberOfChannels;
+    const planes = Array.from({ length: chans }, (_, c) => { const p = new Float32Array(data.numberOfFrames); data.copyTo(p, { planeIndex: c, format: "f32-planar" }); return p; });
+    parts.push({ at: data.timestamp / 1e6, planes }); data.close();
+  });
+  if (!parts.length) return null;
+  const len = parts.reduce((n, p) => n + p.planes[0].length, 0), buf = new AudioBuffer({ length: len, sampleRate: rate, numberOfChannels: chans });
+  let at = 0; for (const p of parts) { p.planes.forEach((pl, c) => buf.copyToChannel(pl, c, at)); at += p.planes[0].length; }
+  const off = new OfflineAudioContext(2, Math.ceil(seconds * 48000), 48000), node = off.createBufferSource(), g = off.createGain();
+  node.buffer = buf;
+  g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(1, 0.1); g.gain.setValueAtTime(1, Math.max(0.1, seconds - 0.25)); g.gain.linearRampToValueAtTime(0, seconds);
+  node.connect(g).connect(off.destination);
+  node.start(0, Math.max(0, start - parts[0].at));
+  return { ...(await pickAudioCodec()), audio: await off.startRendering() };
+}
+
 async function cut(canvas, clip, progress) {
   const { config, mux } = await pickCodec();
-  const ctx = canvas.getContext("2d"), seconds = clip.end - clip.start, frames = Math.round(seconds * FPS);
+  const ctx = canvas.getContext("2d"), frames = Math.round((clip.end - clip.start) * FPS);
   clip.lines = lines(clip);
-  let sound = null;
-  if (src.audio) {
-    progress(0, "Cutting the sound…");
-    const parts = [];
-    let rate = 48000, chans = 2;
-    await decode(src.audio, "audio", clip.start - 0.5, clip.end + 0.2, data => {
-      rate = data.sampleRate; chans = data.numberOfChannels;
-      const planes = Array.from({ length: chans }, (_, c) => { const p = new Float32Array(data.numberOfFrames); data.copyTo(p, { planeIndex: c, format: "f32-planar" }); return p; });
-      parts.push({ at: data.timestamp / 1e6, planes }); data.close();
-    });
-    if (parts.length) {
-      const len = parts.reduce((n, p) => n + p.planes[0].length, 0), buf = new AudioBuffer({ length: len, sampleRate: rate, numberOfChannels: chans });
-      let at = 0; for (const p of parts) { p.planes.forEach((pl, c) => buf.copyToChannel(pl, c, at)); at += p.planes[0].length; }
-      const off = new OfflineAudioContext(2, Math.ceil(frames / FPS * 48000), 48000), node = off.createBufferSource(), g = off.createGain();
-      node.buffer = buf;
-      g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(1, 0.1); g.gain.setValueAtTime(1, Math.max(0.1, seconds - 0.25)); g.gain.linearRampToValueAtTime(0, seconds);
-      node.connect(g).connect(off.destination);
-      node.start(0, Math.max(0, clip.start - parts[0].at));
-      sound = { ...(await pickAudioCodec()), audio: await off.startRendering() };
-    }
-  }
+  progress(0, "Cutting the sound…");
+  const snd = await sound(src, clip.start, clip.end);
   const target = new ArrayBufferTarget();
   const muxer = new Muxer({ target, video: { codec: mux, width: W, height: H, frameRate: FPS },
-    ...(sound && { audio: { codec: sound.mux, sampleRate: 48000, numberOfChannels: 2 } }), fastStart: "in-memory" });
+    ...(snd && { audio: { codec: snd.mux, sampleRate: 48000, numberOfChannels: 2 } }), fastStart: "in-memory" });
   let failed = null, k = 0, prev = null;
   const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => failed = e });
   enc.configure(config);
@@ -263,13 +264,16 @@ async function cut(canvas, clip, progress) {
   prev?.close();
   await enc.flush();
   if (failed) throw failed;
-  if (sound) await encodeAudio(muxer, sound.audio, sound.config);
+  if (snd) await encodeAudio(muxer, snd.audio, snd.config);
   muxer.finalize();
   progress(1);
   const blob = new Blob([target.buffer], { type: "video/mp4" });
-  blob.vp9 = mux === "vp9"; blob.opus = sound?.mux === "opus";
+  blob.vp9 = mux === "vp9"; blob.opus = snd?.mux === "opus";
   return blob;
 }
+
+// For you.js, which lays a creator's video over the page.
+export { open, decode, decoderFor, listen, put, sound, lines };
 
 async function still(canvas, clip) {
   const at = clip.start + 0.5;
@@ -313,7 +317,7 @@ drop.ondrop = e => {
 $("clipBtn").onclick = async () => {
   $("clipBtn").disabled = true; $("clipFile").disabled = true;
   try {
-    const heard = await listen(msg => say(msg));
+    const heard = await listen(src, msg => say(msg));
     ({ words, segments } = heard);
     say("Picking the best moments… (about 10–30 seconds)");
     const { clips } = await call("/api/moments", { segments: heard.segments, duration: src.duration, count: +$("clipCount").value });

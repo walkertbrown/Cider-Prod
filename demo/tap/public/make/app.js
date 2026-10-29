@@ -456,7 +456,7 @@ function background(ctx, bmp, t, seed) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 }
 
-function caption(ctx, text, appear) {
+function caption(ctx, text, appear, at = H * 0.66) {
   const font = s => `800 ${s}px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif`, max = W - 140;
   let size = 104; ctx.font = font(size);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -464,7 +464,7 @@ function caption(ctx, text, appear) {
   // One word wider than the frame (a long web address) shrinks the type instead of running off the edges.
   const widest = Math.max(...lines.map(l => ctx.measureText(l).width));
   if (widest > max) { size = Math.floor(size * max / widest); ctx.font = font(size); lines = wrap(ctx, text.toUpperCase(), max, true); }
-  const lh = Math.round(size * 1.17), y0 = H * 0.66 - (lines.length - 1) * lh / 2;
+  const lh = Math.round(size * 1.17), y0 = at - (lines.length - 1) * lh / 2;
   const k = Math.min(1, appear * 6), sc = 0.9 + 0.1 * k;
   ctx.save(); ctx.globalAlpha = k; ctx.translate(W / 2, 0); ctx.scale(sc, sc);
   lines.forEach((l, i) => {
@@ -566,7 +566,8 @@ async function render(canvas, v, progress) {
 }
 
 // Shared with clips.js (long video to clips).
-export { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, W, H, FPS };
+const currentPage = () => page;
+export { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, currentPage, W, H, FPS };
 
 // ---- Make more like this (/make/?like=<kept post>): read its link, and write in its manner ----
 

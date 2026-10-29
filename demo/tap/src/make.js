@@ -12,11 +12,13 @@
 //   POST /api/ideas    {items} → one Buffer Idea per item (Buffer has no API to delete ideas)
 //   POST /api/transcribe  a 16 kHz mono WAV piece of a long video's sound → timed words (speech-to-text, capped by minutes)
 //   POST /api/moments  {segments, duration, count} → the best stand-alone clips in a long video (capped)
+//   POST /api/shot     {url} → the page as one tall phone screenshot (Cloudflare's browser; kept a day; capped) with its texts and where they sit
+//   POST /api/scroll   {segments, elements, height, page, duration} → where to scroll while the creator talks, and the post (counts as a script run)
 //   GET  /v/<id>.mp4   the hosted video, public, for Buffer to fetch (with ranges)
 
 const SCRIPT_MODEL = "gpt-5.4-mini";
-const CAPS = { script: [20, 200], voice: [150, 1500], minutes: [60, 600] }; // a day: per account, overall
-const CAP_WORDS = { script: "script runs", voice: "voiceover lines", minutes: "minutes of transcription" };
+const CAPS = { script: [20, 200], voice: [150, 1500], minutes: [60, 600], shot: [10, 100] }; // a day: per account, overall
+const CAP_WORDS = { script: "script runs", voice: "voiceover lines", minutes: "minutes of transcription", shot: "page screenshots" };
 const WAV_MAX = 20 * 1024 * 1024; // 16 kHz mono 16-bit: about 10 minutes, under the speech-to-text limit of 25 MB
 const VOICE_MODEL = "gpt-4o-mini-tts";
 const VOICES = new Set(["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"]);
@@ -274,6 +276,80 @@ async function pickMoments(env, segments, duration, count) {
   return { clips: clips.slice(0, count) };
 }
 
+// ---- Put yourself in it: the page as one tall screenshot, and where to scroll while the creator talks ----
+
+const SHOT_TTL = 86400, SHOT_VIEW = { width: 390, height: 844, deviceScaleFactor: 2 }, SHOT_MAX = 12 * 1048576;
+const SHOT_ELEMENTS = "h1,h2,h3,p,li,button,a,img,[role=button],label,strong";
+const sha256 = async s => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("");
+export const shotKey = async url => `shot:${await sha256(url.href)}`;
+
+// Base64 in pieces: one String.fromCharCode over megabytes blows the stack.
+function b64(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 32768) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768));
+  return btoa(s);
+}
+
+// One call to Cloudflare's browser. The free plan allows a request every 10 seconds, so a 429 waits and tries again.
+async function browser(env, what, body) {
+  for (let tries = 0; ; tries++) {
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/browser-rendering/${what}`, {
+      method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${env.BR_TOKEN}` }, body: JSON.stringify(body) });
+    if (r.status === 429 && tries < 2) { await new Promise(ok => setTimeout(ok, 1000 * Math.min(15, +r.headers.get("retry-after") || 10))); continue; }
+    return r;
+  }
+}
+
+// The page as a phone sees it, top to bottom, as a JPEG data URL, with its texts and their tops (CSS px).
+export async function screenshot(env, url) {
+  if (!env.BR_TOKEN || !env.CF_ACCOUNT_ID) return { error: "Page screenshots aren't set up on this Dailies." };
+  const gotoOptions = { waitUntil: "networkidle0", timeout: 20000 };
+  let shot = await browser(env, "screenshot", { url: url.href, viewport: SHOT_VIEW, gotoOptions, screenshotOptions: { fullPage: true, type: "jpeg", quality: 82 } });
+  // A page too tall for one picture: the first 4000 px instead.
+  if (!shot.ok) shot = await browser(env, "screenshot", { url: url.href, viewport: { ...SHOT_VIEW, height: 4000 }, gotoOptions, screenshotOptions: { type: "jpeg", quality: 82 } });
+  if (!shot.ok) return { error: `The page couldn't be photographed (${shot.status}). Check that the link opens.` };
+  const bytes = new Uint8Array(await shot.arrayBuffer());
+  if (bytes.length > SHOT_MAX) return { error: "That page is too long to photograph." };
+  let elements = [];
+  const scrape = await browser(env, "scrape", { url: url.href, viewport: SHOT_VIEW, gotoOptions, elements: [{ selector: SHOT_ELEMENTS }] }).catch(() => null);
+  if (scrape?.ok) {
+    const d = await scrape.json().catch(() => ({})), seen = new Set();
+    for (const e of d.result?.[0]?.results || []) {
+      const text = String(e.text || e.attributes?.find(a => a.name === "alt")?.value || "").replace(/\s+/g, " ").trim().slice(0, 120);
+      const top = Math.round(+e.top || 0), k = `${top}:${text}`;
+      if (!text || !(e.height > 0) || top < 0 || seen.has(k)) continue;
+      seen.add(k); elements.push({ text, top, height: Math.round(e.height) });
+    }
+    elements = elements.sort((a, b) => a.top - b.top).slice(0, 150);
+  }
+  return { jpeg: `data:image/jpeg;base64,${b64(bytes)}`, width: SHOT_VIEW.width, elements };
+}
+
+const SCROLL_RULES = `A creator recorded themselves talking about a web page. Their video will be shown over a screenshot of the page, which scrolls behind them. You get what they said as timed sentences [start-end seconds], and the page's texts with the top of each in px from the top of the page. The page is H px tall; the visible window is 844 px.
+Decide where the page is scrolled to while they talk: when they mention something that is on the page, scroll so it is in view (y = that text's top minus 150, at least 0, at most H minus 844). The first keyframe is t 0, y 0. Give 3 to 8 keyframes in time order; the page holds still between them and glides to the next. Only scroll back up when they clearly return to something. If nothing they say matches the page, pace evenly down it, ending near the bottom.
+Also write the post: "title" (under 60 characters, what the video is about, in their words), "caption" (one or two sentences in their voice, under 300 characters, no hashtags), "hashtags" (3 to 6, without #).
+Return JSON: {"keyframes":[{"t":0,"y":0}],"title":"...","caption":"...","hashtags":["..."]}`;
+
+async function scrollPlan(env, segments, elements, height, page, duration) {
+  const input = `Page: ${String(page.title || "").slice(0, 120)} (${String(page.host || "").slice(0, 80)}). H = ${height}. Video length ${Math.round(duration)} seconds.\n\nWhat they said:\n` +
+    segments.map(g => `[${g.s.toFixed(1)}-${g.e.toFixed(1)}] ${g.t}`).join("\n").slice(0, 12000) +
+    `\n\nOn the page (top: text):\n` + (elements.map(e => `${e.top}: ${e.text}`).join("\n").slice(0, 12000) || "(nothing could be read)");
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    body: JSON.stringify({ model: SCRIPT_MODEL, response_format: { type: "json_object" }, reasoning_effort: "low",
+      messages: [{ role: "system", content: SCROLL_RULES }, { role: "user", content: input }] }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) return { error: d.error?.message || `The planner answered ${r.status}.` };
+  let out; try { out = JSON.parse(d.choices[0].message.content); } catch { return { error: "The planner returned something unreadable. Try again." }; }
+  const max = Math.max(0, height - SHOT_VIEW.height);
+  const keyframes = (Array.isArray(out.keyframes) ? out.keyframes : []).slice(0, 8)
+    .map(k => ({ t: Math.max(0, Math.min(duration, +k.t || 0)), y: Math.max(0, Math.min(max, Math.round(+k.y || 0))) })).sort((a, b) => a.t - b.t);
+  if (!keyframes.length || keyframes[0].t > 0) keyframes.unshift({ t: 0, y: 0 });
+  return { keyframes, title: String(out.title || "").slice(0, 100), caption: String(out.caption || "").slice(0, 500), hashtags: cleanTags(out.hashtags) };
+}
+
 // ---- Drafting --------------------------------------------------------------
 
 export const cleanTags = list => [...new Set([].concat(list || []).map(t => String(t).replace(/[^\p{L}\p{N}_]/gu, "")).filter(Boolean))].slice(0, 8);
@@ -373,6 +449,27 @@ export async function api(req, env, path, { acct, user }, d) {
     const capped = await underCap(env, acct, "script");
     if (capped) return json({ error: capped }, 429);
     const out = await pickMoments(env, segs, +duration || segs.at(-1).e, Math.max(1, Math.min(10, +count || 3)));
+    return json(out, out.error ? 502 : 200);
+  }
+  if (path === "/api/shot" && req.method === "POST") {
+    const u = safeHttp((await req.json().catch(() => ({}))).url);
+    if (!u) return json({ error: "Read a page first." }, 400);
+    const key = await shotKey(u), kept = await env.TAP.get(key, "json");
+    if (kept) return json(kept);
+    const capped = await underCap(env, acct, "shot");
+    if (capped) return json({ error: capped }, 429);
+    const out = await screenshot(env, u);
+    if (!out.error) await env.TAP.put(key, JSON.stringify(out), { expirationTtl: SHOT_TTL });
+    return json(out, out.error ? 502 : 200);
+  }
+  if (path === "/api/scroll" && req.method === "POST") {
+    const { segments, elements, height, page, duration } = await req.json().catch(() => ({}));
+    const segs = (Array.isArray(segments) ? segments : []).slice(0, 300).map(g => ({ s: +g.s || 0, e: +g.e || 0, t: String(g.t || "").slice(0, 400) })).filter(g => g.t);
+    if (!segs.length) return json({ error: "Nothing was heard in your video. Say what the page does, out loud." }, 400);
+    const els = (Array.isArray(elements) ? elements : []).slice(0, 150).map(e => ({ top: Math.max(0, Math.round(+e.top || 0)), text: String(e.text || "").slice(0, 120) })).filter(e => e.text);
+    const capped = await underCap(env, acct, "script");
+    if (capped) return json({ error: capped }, 429);
+    const out = await scrollPlan(env, segs, els, Math.max(SHOT_VIEW.height, Math.round(+height || 0)), page && typeof page === "object" ? page : {}, Math.max(1, Math.min(90, +duration || 90)));
     return json(out, out.error ? 502 : 200);
   }
   if (path === "/api/voice" && req.method === "POST") {
