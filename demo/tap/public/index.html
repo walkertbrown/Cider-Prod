@@ -9,25 +9,53 @@
 <script src="https://pulse.bananafest-destiny.com/p.js" data-site="tap.bananafest-destiny.com" defer></script>
 <link rel="stylesheet" href="/ui.css">
 <style>
-.feats{padding-left:22px}.feats li{margin:8px 0}
+/* Layout only; the look is /ui.css. */
+.hero{display:grid;grid-template-columns:1fr 252px;gap:56px;align-items:center;margin:28px 0 8px}
+.hero h1{font-size:40px;margin-top:0}
+.hero .lede{font-size:18px}
+.phone{margin:0}
+.phone .screen{aspect-ratio:9/16;border:9px solid #0b0a07;border-radius:34px;overflow:hidden;background:#000;
+  box-shadow:0 0 0 1px var(--line),0 18px 40px rgb(0 0 0/.18)}
+.phone video{display:block;width:100%;height:100%;object-fit:cover}
+.phone figcaption{margin-top:12px;text-align:center}
+@media (max-width:720px){.hero{grid-template-columns:1fr;gap:28px}.hero h1{font-size:32px}.phone{width:220px;margin:0 auto}}
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:16px 0 0}
+.feats .card{margin:0}
+.feats h3{margin-bottom:6px}
+.feats p{margin:0;font-size:15px;color:var(--muted)}
 </style>
 </head>
 <body>
 <header class="top"><div><a class="brand" href="/"><img src="/logo.png" alt="" width="28" height="28">Dailies</a>
 <nav><a href="/make/">Make shorts</a><a href="/me">Your shorts</a><a href="/privacy" class="opt">Privacy</a></nav></div></header>
-<main><div class="prose">
-<h1>Short videos for every day, drafted into Buffer.</h1>
-<p class="lede">Dailies makes the posts you mean to make, and puts them in your Buffer as drafts for you to check and send.</p>
-<div class="actions"><a class="btn primary" href="/auth/start">Sign in with Buffer</a></div>
-<ul class="feats">
-<li><b>From a link.</b> Paste a product, an app, an article or a listing, or a few. Dailies writes as many short scripts as you ask for and renders vertical videos in your browser, with captions, voiceover and your own music.</li>
-<li><b>From a store.</b> Paste a Shopify store and each product gets its own short.</li>
-<li><b>From a long video.</b> Pick a talk, a stream or a demo. Dailies finds the best moments, cuts them to 9:16 and captions them, without uploading the whole video.</li>
-<li><b>A month, planned.</b> Dated posts for the networks you've connected, saved as Buffer Ideas.</li>
-<li><b>Building in public.</b> Add Dailies to Claude Code. After you ship, it sends what changed, and you get a video to review and draft.</li>
-</ul>
-<p>Nothing posts by itself: every video and post lands in Buffer as a draft.</p>
-<p class="note">Being built now, in public, for Buffer Commit (28 October to 13 November 2026).</p>
-</div></main>
+<main>
+<section class="hero">
+  <div>
+    <h1>Short videos for every day, drafted into Buffer.</h1>
+    <p class="lede">Paste a link, a store or a long video. Dailies writes and renders vertical shorts in your browser, and puts them in your Buffer as drafts for you to check and send.</p>
+    <div class="actions"><a class="btn primary" href="/auth/start">Sign in with Buffer</a></div>
+    <p class="note">Nothing posts by itself: every video and post lands in Buffer as a draft.</p>
+  </div>
+  <figure class="phone">
+    <div class="screen"><video id="short" src="/home/short.mp4" poster="/home/short.jpg" autoplay muted loop playsinline preload="metadata"
+      aria-label="A short made by Dailies: a comic book cover of a dog, with captions"></video></div>
+    <figcaption class="small muted">A real Dailies short, made from one link: <a href="https://vibecider.bananafest-destiny.com/comiccover">the Comic Cover page</a>.</figcaption>
+  </figure>
+</section>
+
+<h2>What it makes</h2>
+<div class="feats">
+  <div class="card"><h3>From a link</h3><p>A product, an app, an article or a listing, or a few. Dailies writes as many scripts as you ask for and renders them with captions, voiceover and your own music.</p></div>
+  <div class="card"><h3>From a store</h3><p>Paste a Shopify store and each product you pick gets its own short.</p></div>
+  <div class="card"><h3>From a long video</h3><p>A talk, a stream or a demo. Dailies finds the moments that stand on their own and cuts them to captioned 9:16 clips. The video stays on your device.</p></div>
+  <div class="card"><h3>A month, planned</h3><p>Dated posts for the networks you've connected in Buffer, saved as Buffer Ideas. Write any of them into a video.</p></div>
+  <div class="card"><h3>Building in public</h3><p>Add Dailies to Claude Code. After you ship, it sends what changed, and you get a video to review and draft.</p></div>
+</div>
+<p class="note" style="margin-top:28px">Being built now, in public, for Buffer Commit (28 October to 13 November 2026).</p>
+</main>
 <footer class="foot">Dailies is built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>, for Buffer Commit. <a href="/privacy">Privacy</a> · <a href="https://github.com/walkertbrown/Cider-Prod">Public log</a></footer>
+<script>
+// No moving picture for people who asked for less motion: the still and a play button instead.
+if (matchMedia("(prefers-reduced-motion: reduce)").matches) { const v = document.getElementById("short"); v.removeAttribute("autoplay"); v.pause(); v.controls = true; }
+</script>
 </body></html>

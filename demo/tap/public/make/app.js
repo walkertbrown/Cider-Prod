@@ -457,10 +457,14 @@ function background(ctx, bmp, t, seed) {
 }
 
 function caption(ctx, text, appear) {
-  ctx.font = "800 104px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
+  const font = s => `800 ${s}px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif`, max = W - 140;
+  let size = 104; ctx.font = font(size);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  const lines = wrap(ctx, text.toUpperCase(), W - 140, true);
-  const lh = 122, y0 = H * 0.66 - (lines.length - 1) * lh / 2;
+  let lines = wrap(ctx, text.toUpperCase(), max, true);
+  // One word wider than the frame (a long web address) shrinks the type instead of running off the edges.
+  const widest = Math.max(...lines.map(l => ctx.measureText(l).width));
+  if (widest > max) { size = Math.floor(size * max / widest); ctx.font = font(size); lines = wrap(ctx, text.toUpperCase(), max, true); }
+  const lh = Math.round(size * 1.17), y0 = H * 0.66 - (lines.length - 1) * lh / 2;
   const k = Math.min(1, appear * 6), sc = 0.9 + 0.1 * k;
   ctx.save(); ctx.globalAlpha = k; ctx.translate(W / 2, 0); ctx.scale(sc, sc);
   lines.forEach((l, i) => {
