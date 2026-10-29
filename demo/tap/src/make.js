@@ -14,6 +14,7 @@
 //   POST /api/moments  {segments, duration, count} → the best stand-alone clips in a long video (capped)
 //   POST /api/shot     {url} → the page as one tall phone screenshot (Cloudflare's browser; kept a day; capped) with its texts and where they sit
 //   POST /api/scroll   {segments, elements, height, page, duration} → where to scroll while the creator talks, and the post (counts as a script run)
+//   POST /api/say      {page, seconds} → one spoken paragraph for the creator to read to camera (counts as a script run)
 //   GET  /v/<id>.mp4   the hosted video, public, for Buffer to fetch (with ranges)
 
 const SCRIPT_MODEL = "gpt-5.4-mini";
@@ -318,22 +319,23 @@ export async function screenshot(env, url) {
       const text = String(e.text || e.attributes?.find(a => a.name === "alt")?.value || "").replace(/\s+/g, " ").trim().slice(0, 120);
       const top = Math.round(+e.top || 0), k = `${top}:${text}`;
       if (!text || !(e.height > 0) || top < 0 || seen.has(k)) continue;
-      seen.add(k); elements.push({ text, top, height: Math.round(e.height) });
+      seen.add(k); elements.push({ text, top, height: Math.round(e.height), left: Math.round(+e.left || 0), width: Math.round(+e.width || 0) });
     }
     elements = elements.sort((a, b) => a.top - b.top).slice(0, 150);
   }
   return { jpeg: `data:image/jpeg;base64,${b64(bytes)}`, width: SHOT_VIEW.width, elements };
 }
 
-const SCROLL_RULES = `A creator recorded themselves talking about a web page. Their video will be shown over a screenshot of the page, which scrolls behind them. You get what they said as timed sentences [start-end seconds], and the page's texts with the top of each in px from the top of the page. The page is H px tall; the visible window is 844 px.
+const SCROLL_RULES = `A creator recorded themselves talking about a web page. Their video will be shown over a screenshot of the page, which scrolls behind them. You get what they said as timed sentences [start-end seconds], and the page's texts, each as "#index top: text" with the top in px from the top of the page. The page is H px tall; the visible window is 844 px.
 Decide where the page is scrolled to while they talk: when they mention something that is on the page, scroll so it is in view (y = that text's top minus 150, at least 0, at most H minus 844). The first keyframe is t 0, y 0. Give 3 to 8 keyframes in time order; the page holds still between them and glides to the next. Only scroll back up when they clearly return to something. If nothing they say matches the page, pace evenly down it, ending near the bottom.
+When they tell the viewer to press, tap, click or hit a named button or link that is on the page, that keyframe's "tap" is the element's index and its y keeps the element in view; otherwise "tap" is null. Only for a real instruction, never a passing mention.
 Also write the post: "title" (under 60 characters, what the video is about, in their words), "caption" (one or two sentences in their voice, under 300 characters, no hashtags), "hashtags" (3 to 6, without #).
-Return JSON: {"keyframes":[{"t":0,"y":0}],"title":"...","caption":"...","hashtags":["..."]}`;
+Return JSON: {"keyframes":[{"t":0,"y":0,"tap":null}],"title":"...","caption":"...","hashtags":["..."]}`;
 
 async function scrollPlan(env, segments, elements, height, page, duration) {
   const input = `Page: ${String(page.title || "").slice(0, 120)} (${String(page.host || "").slice(0, 80)}). H = ${height}. Video length ${Math.round(duration)} seconds.\n\nWhat they said:\n` +
     segments.map(g => `[${g.s.toFixed(1)}-${g.e.toFixed(1)}] ${g.t}`).join("\n").slice(0, 12000) +
-    `\n\nOn the page (top: text):\n` + (elements.map(e => `${e.top}: ${e.text}`).join("\n").slice(0, 12000) || "(nothing could be read)");
+    `\n\nOn the page (#index top: text):\n` + (elements.map((e, i) => `#${i} ${e.top}: ${e.text}`).join("\n").slice(0, 12000) || "(nothing could be read)");
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
@@ -344,10 +346,37 @@ async function scrollPlan(env, segments, elements, height, page, duration) {
   if (!r.ok) return { error: d.error?.message || `The planner answered ${r.status}.` };
   let out; try { out = JSON.parse(d.choices[0].message.content); } catch { return { error: "The planner returned something unreadable. Try again." }; }
   const max = Math.max(0, height - SHOT_VIEW.height);
+  // A tapped element becomes the point to press, in the page's own px; only elements with a known place can be tapped.
   const keyframes = (Array.isArray(out.keyframes) ? out.keyframes : []).slice(0, 8)
-    .map(k => ({ t: Math.max(0, Math.min(duration, +k.t || 0)), y: Math.max(0, Math.min(max, Math.round(+k.y || 0))) })).sort((a, b) => a.t - b.t);
+    .map(k => {
+      const e = Number.isInteger(k.tap) ? elements[k.tap] : null;
+      return { t: Math.max(0, Math.min(duration, +k.t || 0)), y: Math.max(0, Math.min(max, Math.round(+k.y || 0))),
+        ...(e?.width > 0 && e.height > 0 ? { tap: { x: Math.round(e.left + e.width / 2), y: Math.round(e.top + e.height / 2) } } : {}) };
+    }).sort((a, b) => a.t - b.t);
   if (!keyframes.length || keyframes[0].t > 0) keyframes.unshift({ t: 0, y: 0 });
   return { keyframes, title: String(out.title || "").slice(0, 100), caption: String(out.caption || "").slice(0, 500), hashtags: cleanTags(out.hashtags) };
+}
+
+// ---- What to say: one paragraph for the creator to read to camera -------------
+
+const SAY_RULES = `You write what the owner of a web page will say to camera, in one take, for a short vertical video. One spoken paragraph in the first person, plain and conversational, like telling a friend: what the page is for, who it is for, and one or two concrete things on it worth pointing at, named as they appear on the page so the page can be scrolled to them. Use only facts that are on the page; never invent numbers, prices or reviews. No greeting like "hey guys", no hashtags, no stage directions, no emoji. It must read aloud in the seconds given, at about 2.4 words a second. End with what to do next (the link is in the bio or the caption).
+Return JSON: {"text":"..."}`;
+
+async function sayScript(env, page, seconds) {
+  const input = `Host: ${page.host}\nURL: ${page.url}\nTitle: ${page.title}\nDescription: ${page.description}\n` +
+    (page.products?.length ? `Products: ${JSON.stringify(page.products).slice(0, 3000)}\n` : "") +
+    `Seconds: ${seconds} (about ${Math.round(seconds * 2.4)} words).\n\nPage text:\n${String(page.text || "").slice(0, 12000)}`;
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    body: JSON.stringify({ model: SCRIPT_MODEL, response_format: { type: "json_object" }, reasoning_effort: "low",
+      messages: [{ role: "system", content: SAY_RULES }, { role: "user", content: input }] }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) return { error: d.error?.message || `The writer answered ${r.status}.` };
+  let out; try { out = JSON.parse(d.choices[0].message.content); } catch { return { error: "The writer returned something unreadable. Try again." }; }
+  const text = String(out.text || "").replace(/\s+/g, " ").trim().slice(0, 1500);
+  return text ? { text } : { error: "The writer came back empty. Try again." };
 }
 
 // ---- Drafting --------------------------------------------------------------
@@ -466,10 +495,19 @@ export async function api(req, env, path, { acct, user }, d) {
     const { segments, elements, height, page, duration } = await req.json().catch(() => ({}));
     const segs = (Array.isArray(segments) ? segments : []).slice(0, 300).map(g => ({ s: +g.s || 0, e: +g.e || 0, t: String(g.t || "").slice(0, 400) })).filter(g => g.t);
     if (!segs.length) return json({ error: "Nothing was heard in your video. Say what the page does, out loud." }, 400);
-    const els = (Array.isArray(elements) ? elements : []).slice(0, 150).map(e => ({ top: Math.max(0, Math.round(+e.top || 0)), text: String(e.text || "").slice(0, 120) })).filter(e => e.text);
+    const els = (Array.isArray(elements) ? elements : []).slice(0, 150).map(e => ({ top: Math.max(0, Math.round(+e.top || 0)), text: String(e.text || "").slice(0, 120),
+      left: Math.max(0, Math.round(+e.left || 0)), width: Math.max(0, Math.round(+e.width || 0)), height: Math.max(0, Math.round(+e.height || 0)) })).filter(e => e.text);
     const capped = await underCap(env, acct, "script");
     if (capped) return json({ error: capped }, 429);
     const out = await scrollPlan(env, segs, els, Math.max(SHOT_VIEW.height, Math.round(+height || 0)), page && typeof page === "object" ? page : {}, Math.max(1, Math.min(90, +duration || 90)));
+    return json(out, out.error ? 502 : 200);
+  }
+  if (path === "/api/say" && req.method === "POST") {
+    const { page, seconds } = await req.json().catch(() => ({}));
+    if (!page?.text && !page?.description) return json({ error: "Read a page first." }, 400);
+    const capped = await underCap(env, acct, "script");
+    if (capped) return json({ error: capped }, 429);
+    const out = await sayScript(env, page, Math.max(10, Math.min(90, Math.round(+seconds || 30))));
     return json(out, out.error ? 502 : 200);
   }
   if (path === "/api/voice" && req.method === "POST") {

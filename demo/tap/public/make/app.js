@@ -567,7 +567,7 @@ async function render(canvas, v, progress) {
 
 // Shared with clips.js (long video to clips).
 const currentPage = () => page;
-export { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, currentPage, W, H, FPS };
+export { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, currentPage, musicControls, mixAudio, W, H, FPS };
 
 // ---- Make more like this (/make/?like=<kept post>): read its link, and write in its manner ----
 

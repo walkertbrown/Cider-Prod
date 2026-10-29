@@ -41,9 +41,18 @@ async function open(file) {
   buf.buffer.fileStart = 0;
   mp4.appendBuffer(buf.buffer); mp4.flush();
   if (!info) throw new Error(failed ? `Couldn't read the video: ${failed}` : "Couldn't read the video's index.");
+  // A recording made in a browser is fragmented: its index names no samples, each fragment does. Then it is read whole.
+  let iso = mp4;
+  if (info.isFragmented && !mp4.getTrackById(info.videoTracks[0]?.id)?.samples.length) {
+    if (file.size > 300 * 1048576) throw new Error("This recording is too large to read here (over 300 MB).");
+    const all = await file.arrayBuffer(); all.fileStart = 0;
+    iso = createFile(); info = null; iso.onReady = i => info = i; iso.onError = e => failed = e;
+    iso.appendBuffer(all); iso.flush();
+    if (!info) throw new Error(failed ? `Couldn't read the recording: ${failed}` : "Couldn't read the recording.");
+  }
   const track = t => {
     if (!t) return null;
-    const trak = mp4.getTrackById(t.id), entry = trak.mdia.minf.stbl.stsd.entries[0];
+    const trak = iso.getTrackById(t.id), entry = trak.mdia.minf.stbl.stsd.entries[0];
     const elst = trak.edts?.elst?.entries?.find(e => e.media_time >= 0);
     return { info: t, trak, entry, samples: trak.samples, shift: (elst?.media_time || 0) / t.timescale, file };
   };
@@ -51,7 +60,8 @@ async function open(file) {
   if (!video) throw new Error("There's no video track in that file.");
   const m = video.info.matrix || [65536, 0, 0, 0, 65536];
   const rot = ((Math.round(Math.atan2(m[1], m[0]) * 180 / Math.PI) % 360) + 360) % 360;
-  const duration = info.duration / info.timescale;
+  const last = video.samples.at(-1);
+  const duration = info.duration / info.timescale || (last ? (last.cts + last.duration) / last.timescale - video.shift : 0);
   return { file, video, audio, rot, duration, width: video.info.track_width, height: video.info.track_height };
 }
 
@@ -84,7 +94,7 @@ async function decoderFor(t, kind) {
   const Dec = kind === "video" ? VideoDecoder : AudioDecoder;
   const config = kind === "video"
     ? { codec: t.info.codec, codedWidth: t.info.video?.width || t.info.track_width, codedHeight: t.info.video?.height || t.info.track_height, description: description(t.entry) }
-    : { codec: t.info.codec.replace(/^mp4a\.40\.0*/, "mp4a.40."), sampleRate: t.info.audio.sample_rate, numberOfChannels: t.info.audio.channel_count, description: description(t.entry) };
+    : { codec: t.info.codec.replace(/^mp4a\.40\.0*/, "mp4a.40.").replace(/^opus$/i, "opus"), sampleRate: t.info.audio.sample_rate, numberOfChannels: t.info.audio.channel_count, description: description(t.entry) };
   if (!(await Dec.isConfigSupported(config).catch(() => ({}))).supported)
     throw new Error(kind === "video" ? `This browser can't decode this video (${t.info.codec}). ${HEVC.test(t.info.codec) ? IPHONE : "Try Chrome, or export it as H.264."}` : `This browser can't decode this video's sound (${t.info.codec}).`);
   return [Dec, config];

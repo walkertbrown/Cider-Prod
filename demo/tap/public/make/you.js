@@ -2,7 +2,7 @@
 // browser (MediaPipe's selfie segmenter) and laid over the page, which scrolls to what they're saying, with
 // their words as captions. The video stays on the device; only its sound goes out, for the words. The page
 // is photographed once by Cloudflare's browser (/api/shot) and the scroll is planned from the words (/api/scroll).
-import { $, el, call, cards, allBox, sidePanel, pickCodec, encodeAudio, caption, currentPage, W, H, FPS } from "./app.js";
+import { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, currentPage, musicControls, mixAudio, W, H, FPS } from "./app.js";
 import { open, decode, decoderFor, listen, put, sound, lines } from "./clips.js";
 import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs";
 
@@ -16,11 +16,19 @@ const say = (msg, bad) => { $("youStatus").textContent = msg; $("youStatus").cla
 const upright = s => s.rot % 180 ? [s.height, s.width] : [s.width, s.height];
 let src = null;
 
-// ---- The page -----------------------------------------------------------------------
+// ---- The video in: a file, or a take recorded here ------------------------------------
 
-$("youFile").onchange = async () => {
-  const f = $("youFile").files[0]; src = null; $("youBtn").disabled = true; $("youInfo").textContent = "";
-  $("youName").textContent = f ? f.name : "or drop it here";
+// The page's picture is asked for as soon as a video is in hand, so it's usually there by "Make the video".
+const shots = new Map();
+function shotFor(url) {
+  if (!shots.has(url)) shots.set(url, call("/api/shot", { url }).catch(e => { shots.delete(url); throw e; }));
+  return shots.get(url);
+}
+const warm = () => { const u = currentPage()?.url; if (u) shotFor(u).catch(() => {}); };
+
+async function useFile(f, label) {
+  src = null; $("youBtn").disabled = true; $("youInfo").textContent = "";
+  $("youName").textContent = label || (f ? f.name : "or drop it here");
   if (!f) return;
   say("Reading the video…");
   try {
@@ -29,10 +37,11 @@ $("youFile").onchange = async () => {
     await decoderFor(src.video, "video").catch(e => { src = null; throw e; });
     if (!src.audio) { src = null; throw new Error("That video has no sound. Say what the page does, out loud."); }
     const [w, h] = upright(src);
-    $("youInfo").textContent = `${Math.round(src.duration)} s · ${w}×${h}${src.duration > MAX_SECONDS ? ` · the first ${MAX_SECONDS} s are used` : ""}`;
-    $("youBtn").disabled = false; say("");
+    $("youInfo").textContent = `${Math.round(src.duration)} s · ${Math.round(w)}×${Math.round(h)}${src.duration > MAX_SECONDS ? ` · the first ${MAX_SECONDS} s are used` : ""}`;
+    $("youBtn").disabled = false; say(""); warm();
   } catch (err) { say(err.message, true); }
-};
+}
+$("youFile").onchange = () => useFile($("youFile").files[0]);
 
 const drop = $("youDrop");
 drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
@@ -43,6 +52,98 @@ drop.ondrop = e => {
   $("youFile").files = e.dataTransfer.files; $("youFile").dispatchEvent(new Event("change"));
 };
 
+// ---- Recording here, with the words rolling over the camera -----------------------------
+
+const MIMES = ["video/mp4;codecs=avc1,mp4a.40.2", "video/mp4;codecs=avc1,opus", "video/mp4"]; // an MP4 the reader above can open; Firefox only records WebM
+const rec = { stream: null, recorder: null, take: null, raf: 0, t0: 0 };
+const recSay = (msg, bad) => { $("recStatus").textContent = msg; $("recStatus").className = "status small" + (bad ? " bad" : ""); };
+const canRecord = () => "MediaRecorder" in window && MIMES.some(t => MediaRecorder.isTypeSupported(t)) && !!navigator.mediaDevices?.getUserMedia;
+
+$("recOpen").onclick = async () => {
+  if (!currentPage()?.url) return say("Read a page first.", true);
+  $("recBox").hidden = false; roll(0);
+  if (!canRecord()) { $("recBtn").disabled = true; return recSay("This browser can't record an MP4 here. Use Chrome, Edge or Safari, or drop a video file.", true); }
+  if (await camera()) warm();
+  $("recBox").scrollIntoView({ behavior: "smooth", block: "nearest" });
+};
+
+async function camera() {
+  if (rec.stream) return true;
+  recSay("Starting the camera…");
+  try {
+    rec.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1080 }, height: { ideal: 1920 }, frameRate: { ideal: 30 } },
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) {
+    recSay(e.name === "NotAllowedError" ? "Camera access was refused. Allow it in the address bar, or drop a video file instead." : `The camera couldn't start (${e.message}).`, true);
+    return false;
+  }
+  const { width = 9, height = 16 } = rec.stream.getVideoTracks()[0].getSettings();
+  $("recStage").style.aspectRatio = `${width} / ${height}`; $("recStage").classList.toggle("wide", width > height);
+  $("recCam").srcObject = rec.stream; $("recStage").hidden = false; $("recTake").hidden = true;
+  $("recUse").hidden = true; $("recAgain").hidden = true; $("recBtn").hidden = false; $("recBtn").disabled = false; recSay("");
+  return true;
+}
+function stopCamera() { rec.stream?.getTracks().forEach(t => t.stop()); rec.stream = null; $("recCam").srcObject = null; }
+
+$("recWrite").onclick = async () => {
+  const page = currentPage(); if (!page) return;
+  $("recWrite").disabled = true; recSay("Writing… (about 10 seconds)");
+  try { $("recText").value = (await call("/api/say", { page, seconds: +$("recLen").value || 30 })).text; recSay(""); roll(0); }
+  catch (e) { recSay(e.message, true); }
+  $("recWrite").disabled = false;
+};
+$("recPace").oninput = () => { $("recWpm").textContent = $("recPace").value; roll(0); };
+$("recText").oninput = () => roll(0);
+
+// The words roll up at the pace set: after a second's hold, the last line reaches the top as the reading time runs out.
+function roll(elapsed) {
+  const r = $("recRoll"), text = $("recText").value.trim(), words = text.split(/\s+/).filter(Boolean).length;
+  r.textContent = text || "Type what you'll say above, or have one written. It rolls up here while you record.";
+  const seconds = words / (+$("recPace").value || 150) * 60, travel = Math.max(0, r.scrollHeight - $("recPrompter").clientHeight * 0.4);
+  r.style.transform = `translateY(${seconds ? -Math.min(travel, Math.max(0, elapsed - 1) / seconds * travel) : 0}px)`;
+}
+
+$("recBtn").onclick = async () => {
+  if (rec.recorder) return finishTake();
+  if (!(await camera())) return;
+  $("recBtn").disabled = true; $("recClose").disabled = true; $("recWrite").disabled = true;
+  for (const n of [3, 2, 1]) { $("recCount").textContent = n; await new Promise(r => setTimeout(r, 800)); }
+  $("recCount").textContent = "";
+  const mimeType = MIMES.find(t => MediaRecorder.isTypeSupported(t)), parts = [];
+  const r = new MediaRecorder(rec.stream, { mimeType, videoBitsPerSecond: 5e6, audioBitsPerSecond: 128e3 });
+  r.ondataavailable = e => e.data.size && parts.push(e.data);
+  r.onstop = () => {
+    const blob = new Blob(parts, { type: "video/mp4" });
+    rec.take = new File([blob], `take-${new Date().toISOString().slice(0, 16).replace(/\D/g, "")}.mp4`, { type: "video/mp4" });
+    rec.recorder = null; cancelAnimationFrame(rec.raf); $("recTimer").textContent = ""; $("recTimer").classList.remove("on");
+    $("recStage").hidden = true; $("recTake").src = URL.createObjectURL(blob); $("recTake").hidden = false;
+    $("recBtn").hidden = true; $("recUse").hidden = false; $("recAgain").hidden = false; $("recClose").disabled = false; $("recWrite").disabled = false;
+    recSay(`${Math.round((performance.now() - rec.t0) / 1000)} s recorded. Watch it back, then use it or go again.`);
+  };
+  r.onerror = e => { recSay(`Recording failed (${e.error?.message || e.error?.name || "unknown"}).`, true); finishTake(); };
+  rec.recorder = r; rec.t0 = performance.now(); r.start();
+  $("recBtn").textContent = "Stop"; $("recBtn").disabled = false; $("recTimer").classList.add("on");
+  const tick = () => {
+    const s = (performance.now() - rec.t0) / 1000;
+    $("recTimer").textContent = `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+    roll(s);
+    if (s >= MAX_SECONDS) return finishTake();
+    rec.raf = requestAnimationFrame(tick);
+  };
+  tick();
+};
+function finishTake() {
+  const r = rec.recorder; if (!r) return;
+  $("recBtn").textContent = "Record"; $("recBtn").disabled = true;
+  if (r.state !== "inactive") r.stop();
+}
+$("recUse").onclick = async () => {
+  $("recTake").pause(); stopCamera(); $("recBox").hidden = true; $("youFile").value = "";
+  await useFile(rec.take, `Your take (${rec.take.name})`);
+};
+$("recAgain").onclick = () => { $("recTake").pause(); camera(); };
+$("recClose").onclick = () => { if (rec.recorder) return; $("recTake").pause(); stopCamera(); $("recBox").hidden = true; };
+
 $("youBtn").onclick = async () => {
   const page = currentPage();
   if (!page?.url) return say("Read a page first.", true);
@@ -50,7 +151,7 @@ $("youBtn").onclick = async () => {
   try {
     const end = Math.min(src.duration, MAX_SECONDS);
     say("Photographing the page and listening to you…");
-    const [heard, shot] = await Promise.all([listen(src, msg => say(msg), end), call("/api/shot", { url: page.url })]);
+    const [heard, shot] = await Promise.all([listen(src, msg => say(msg), end), shotFor(page.url)]);
     if (!heard.segments.length) throw new Error("Nothing was heard in your video. Say what the page does, out loud.");
     say("Planning the scroll…");
     const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error("The page's picture couldn't be read.")); i.src = shot.jpeg; });
@@ -59,7 +160,7 @@ $("youBtn").onclick = async () => {
     const plan = await call("/api/scroll", { segments: heard.segments, elements: shot.elements, height, page: { title: page.title, host: page.host }, duration: end })
       .catch(e => ({ note: e.message, keyframes: [{ t: 0, y: 0 }, { t: end, y: Math.min(Math.max(0, height - VIEW), 70 * end) }], title: page.title || "", caption: "", hashtags: [] }));
     const v = { angle: "You, over the page", title: plan.title || page.title || "", caption: plan.caption, hashtags: plan.hashtags, scenes: [], page,
-      end, layout: "cutout", captions: true, keyframes: plan.keyframes, words: heard.words, shot: { img, height } };
+      end, layout: "cutout", captions: true, keyframes: plan.keyframes, words: heard.words, shot: { img, height, width: shot.width || 390 } };
     cards.length = 0; $("videos").replaceChildren(); $("allTicks").replaceChildren(); $("allOut").replaceChildren();
     const made = youCard(v, src, plan.note);
     $("videos").replaceChildren(made.card); allBox(); say("");
@@ -79,9 +180,10 @@ function youCard(v, s, note) {
     el("option", { value: "bubble", textContent: "Bubble: you in a circle, bottom left" }),
     el("option", { value: "split", textContent: "Split: the page above, you below" }));
   const caps = el("input", { type: "checkbox", checked: true, onchange() { v.captions = this.checked; redraw(); } });
-  const stops = v.keyframes.length - 1;
+  const stops = v.keyframes.length - 1, taps = v.keyframes.filter(k => k.tap).length;
   const canvas = el("canvas", { width: W, height: H, className: "preview" });
-  const state = { v, music: { set() {} }, mp4: null, uploaded: null };
+  const music = musicControls(v);
+  const state = { v, music, mp4: null, uploaded: null };
   cards.push(state);
   const redraw = () => still(canvas, v, s).catch(e => say(e.message, true));
   const side = sidePanel(canvas);
@@ -92,7 +194,8 @@ function youCard(v, s, note) {
         el("div", { className: "grp", textContent: "The look" }),
         el("label", { className: "f" }, "Layout", layout),
         el("div", { style: "margin-top:12px" }, el("label", { className: "ch" }, caps, "Captions from your words")),
-        el("p", { className: "note", textContent: `The page scrolls to ${stops} place${stops === 1 ? "" : "s"} as you talk about them. Rendering reads your video again and cuts you out frame by frame, so give it a minute or two.` }),
+        el("p", { className: "note", textContent: `The page scrolls to ${stops} place${stops === 1 ? "" : "s"} as you talk about them${taps ? `, and a pointer presses ${taps === 1 ? "the button you say to press" : `the ${taps} buttons you say to press`}` : ""}. Rendering reads your video again and cuts you out frame by frame, so give it a minute or two.` }),
+        music.box,
         el("div", { className: "grp", textContent: "Post" }),
         el("label", { className: "f" }, "Title (for YouTube and TikTok)", title),
         el("label", { className: "f" }, "Caption", cap),
@@ -207,8 +310,9 @@ function scrollAt(kf, t) {
 // Where the person goes in Cutout: their box, eased from frame to frame so they don't jump; bottom centre, up to 55% of the height.
 function place(box, smooth) {
   if (smooth.r === undefined) Object.assign(smooth, box); else for (const k of "xyrb") smooth[k] += (box[k] - smooth[k]) * 0.2;
-  const bw = smooth.r - smooth.x, bh = smooth.b - smooth.y, s = Math.min(H * 0.55 / bh, W * 0.92 / bw);
-  return { sx: smooth.x, sy: smooth.y, sw: bw, sh: bh, dx: (W - bw * s) / 2, dy: H - bh * s, dw: bw * s, dh: bh * s };
+  // Bottom right, under half the frame tall and wide: the page window stays readable above and captions have the left.
+  const bw = smooth.r - smooth.x, bh = smooth.b - smooth.y, s = Math.min(H * 0.46 / bh, W * 0.48 / bw);
+  return { sx: smooth.x, sy: smooth.y, sw: bw, sh: bh, dx: W - bw * s - 36, dy: H - bh * s, dw: bw * s, dh: bh * s };
 }
 
 function pill(ctx, text) {
@@ -219,42 +323,125 @@ function pill(ctx, text) {
   ctx.fillStyle = "#fff"; ctx.fillText(text, x + w / 2 + 14, y + h / 2 + 1, w - 90);
 }
 
+// A round pointer that comes in from the lower right while the page glides to a tapped element, presses it as the page
+// lands, and fades. Drawn over the person, like a cursor in a screen recording. `k` is canvas px per page px; `scroll` is
+// the page's offset in canvas px; `rect` is the window the page shows in.
+function pointer(ctx, v, t, rect, k, scroll) {
+  const kf = v.keyframes;
+  for (let i = 1; i < kf.length; i++) {
+    const a = kf[i - 1], b = kf[i];
+    if (!b.tap) continue;
+    const glide = Math.min((b.t - a.t) * 0.8, Math.max(0.6, Math.abs(b.y - a.y) / 1200)), from = b.t - glide;
+    if (t < from || t > b.t + 1.6) continue;
+    const tx = rect.x + b.tap.x * k, ty = rect.y + b.tap.y * k - scroll;
+    if (ty < rect.y + 20 || ty > rect.y + rect.h - 20) return;
+    const u = Math.min(1, (t - from) / glide), e = 1 - (1 - u) ** 3, x0 = rect.x + rect.w * 0.92, y0 = rect.y + rect.h * 0.96;
+    const x = x0 + (tx - x0) * e, y = y0 + (ty - y0) * e;
+    const press = Math.max(0, Math.min(1, (t - b.t) / 0.5)), fade = t > b.t + 1 ? Math.max(0, 1 - (t - b.t - 1) / 0.6) : 1;
+    const r = press > 0 ? 26 : 32;
+    ctx.save(); ctx.globalAlpha = fade;
+    if (press > 0 && press < 1) { ctx.strokeStyle = "rgba(232,184,48,0.9)"; ctx.lineWidth = 10 * (1 - press); ctx.beginPath(); ctx.arc(x, y, 30 + 80 * press, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 5;
+    ctx.fillStyle = "#e8b830"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); // gold, so it shows on a white page
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.lineWidth = 5; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.arc(x, y, r + 3.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    return;
+  }
+}
+
+const FRAME = { x: 120, y: 130, w: 840, h: 1110, r: 44 }; // the phone-shaped window the page scrolls in; it ends above the person's head
+
+// The backdrop behind the window: the page's own colours, blurred (scaled down in steps and back up) and darkened. Once a video.
+function backdrop(v) {
+  if (v._bg) return v._bg;
+  const img = v.shot.img, c = Object.assign(document.createElement("canvas"), { width: W, height: H }), x = c.getContext("2d");
+  let src = img, sw = img.naturalWidth, sh = Math.min(img.naturalHeight, Math.round(img.naturalWidth * H / W));
+  for (const w of [270, 68, 17]) {
+    const t = Object.assign(document.createElement("canvas"), { width: w, height: Math.round(w * H / W) }), tx = t.getContext("2d");
+    tx.imageSmoothingQuality = "high"; tx.drawImage(src, 0, 0, sw, sh, 0, 0, t.width, t.height); src = t; sw = t.width; sh = t.height;
+  }
+  x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, W, H);
+  x.fillStyle = "rgba(10,10,12,0.66)"; x.fillRect(0, 0, W, H);
+  const g = x.createRadialGradient(W / 2, H * 0.35, H * 0.15, W / 2, H * 0.5, H * 0.85);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.5)"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  return v._bg = c;
+}
+
+// The page in its window, scrolled to time t. Returns what the pointer needs: canvas px per page px and the scroll offset.
+function pageWindow(ctx, v, t, rect, radius) {
+  const img = v.shot.img, k = rect.w / v.shot.width, ph = img.naturalHeight * (rect.w / img.naturalWidth);
+  const off = Math.min(scrollAt(v.keyframes, t) / v.shot.height * ph, Math.max(0, ph - rect.h));
+  ctx.save();
+  if (radius) {
+    ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 70; ctx.shadowOffsetY = 24; ctx.fillStyle = "#111";
+    ctx.beginPath(); ctx.roundRect(rect.x, rect.y, rect.w, rect.h, radius); ctx.fill(); ctx.shadowColor = "transparent";
+  }
+  ctx.beginPath(); ctx.roundRect(rect.x, rect.y, rect.w, rect.h, radius); ctx.clip();
+  ctx.fillStyle = "#fff"; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+  ctx.drawImage(img, rect.x, rect.y - off, rect.w, ph);
+  ctx.restore();
+  if (radius) { ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.beginPath(); ctx.roundRect(rect.x + 1.5, rect.y + 1.5, rect.w - 3, rect.h - 3, radius - 1.5); ctx.stroke(); }
+  return { k, off };
+}
+
+// Captions in a dark box beside the person: left-aligned, anchored to the bottom, between x0 and x1.
+function captionBox(ctx, text, appear, x0, x1, bottom) {
+  const maxW = x1 - x0 - 56, font = s => `800 ${s}px ${FONT}`, widest = ls => Math.max(...ls.map(l => ctx.measureText(l).width));
+  let size = 72; ctx.font = font(size); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  let lines = wrap(ctx, text.toUpperCase(), maxW, true), w = widest(lines);
+  if (w > maxW) { size = Math.max(36, Math.floor(size * maxW / w)); ctx.font = font(size); lines = wrap(ctx, text.toUpperCase(), maxW, true); w = widest(lines); }
+  const lh = Math.round(size * 1.2), bw = Math.min(maxW, w) + 56, bh = lines.length * lh + 36, k = Math.min(1, appear * 6), top = bottom - bh;
+  ctx.save(); ctx.globalAlpha = k; ctx.translate(0, (1 - k) * 14);
+  ctx.fillStyle = "rgba(12,12,14,0.8)"; ctx.beginPath(); ctx.roundRect(x0, top, bw, bh, 20); ctx.fill();
+  lines.forEach((l, i) => { ctx.fillStyle = i === 0 ? "#fff" : "#ffd75e"; ctx.fillText(l, x0 + 28, top + 18 + lh * (i + 0.5), maxW); });
+  ctx.restore();
+}
+
 function drawFrame(ctx, v, s, f, cut, has, t, smooth) {
-  const { img, height } = v.shot, scale = W / img.naturalWidth, ph = img.naturalHeight * scale;
-  const y = scrollAt(v.keyframes, t) / height * ph, [uw, uh] = upright(s);
-  ctx.fillStyle = "#0b0b0b"; ctx.fillRect(0, 0, W, H);
+  const [uw, uh] = upright(s), host = v.page.host || "", line = v.captions && v.lines.findLast(c => c.s <= t);
+  const showing = line && t < line.e + 0.6 ? line : null;
   if (v.layout === "split") {
-    const top = Math.round(H * 0.6);
-    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, top); ctx.clip(); ctx.drawImage(img, 0, -Math.min(y, Math.max(0, ph - top)), W, ph); ctx.restore();
-    const k = Math.max(W / uw, (H - top) / uh);
-    ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, H - top); ctx.clip(); put(ctx, f, (W - uw * k) / 2, top + (H - top - uh * k) / 2, uw * k, uh * k, s.rot); ctx.restore();
+    // A dark bar with the site's name, the page under it to 60%, the person below. A portrait clip is shown from near
+    // its top, where the face is; a landscape one fills the band.
+    ctx.fillStyle = "#0b0b0b"; ctx.fillRect(0, 0, W, H);
+    const bar = 150, top = Math.round(H * 0.6), rect = { x: 0, y: bar, w: W, h: top - bar }, { k, off } = pageWindow(ctx, v, t, rect, 0);
+    const kk = Math.max(W / uw, (H - top) / uh), dy = top + Math.min(0, H - top - uh * kk) * 0.09;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, H - top); ctx.clip(); put(ctx, f, (W - uw * kk) / 2, dy, uw * kk, uh * kk, s.rot); ctx.restore();
+    pointer(ctx, v, t, rect, k, off);
+    pill(ctx, host);
+    if (showing) captionBox(ctx, showing.text, t - showing.s, 40, W - 40, H - 190); // over the chest, not the face
+    return;
+  }
+  ctx.drawImage(backdrop(v), 0, 0);
+  const { k, off } = pageWindow(ctx, v, t, FRAME, FRAME.r);
+  let x0 = 40, x1 = W - 40; // where captions may go, beside the person
+  if (v.layout === "cutout" && has) {
+    const p = place(cut.box(), smooth);
+    ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
+    ctx.drawImage(cut.person, p.sx, p.sy, p.sw, p.sh, p.dx, p.dy, p.dw, p.dh);
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    x1 = Math.min(x1, Math.max(x0 + 440, p.dx - 24));
   } else {
-    ctx.drawImage(img, 0, -Math.min(y, Math.max(0, ph - H)), W, ph);
-    if (v.layout === "cutout" && has) {
-      const p = place(cut.box(), smooth);
-      ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
-      ctx.drawImage(cut.person, p.sx, p.sy, p.sw, p.sh, p.dx, p.dy, p.dw, p.dh);
-      ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-    } else {
-      // The whole picture in a gold-ringed circle, bottom left, framed on the upper part where a face is.
-      const r = W * 0.19, cx = 44 + r, cy = H - 64 - r, k = Math.max(2 * r / uw, 2 * r / uh);
-      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 30; ctx.fillStyle = "#000"; ctx.fill();
-      ctx.shadowColor = "transparent"; ctx.clip();
-      put(ctx, f, cx - uw * k / 2, cy - uh * k * (uh > uw ? 0.38 : 0.5), uw * k, uh * k, s.rot); ctx.restore();
-      ctx.lineWidth = 10; ctx.strokeStyle = "#e8b830"; ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI * 2); ctx.stroke();
-    }
+    // The whole picture in a gold-ringed circle, bottom left, framed on the upper part where a face is.
+    const r = W * 0.19, cx = 44 + r, cy = H - 64 - r, kk = Math.max(2 * r / uw, 2 * r / uh);
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 30; ctx.fillStyle = "#000"; ctx.fill();
+    ctx.shadowColor = "transparent"; ctx.clip();
+    put(ctx, f, cx - uw * kk / 2, cy - uh * kk * (uh > uw ? 0.38 : 0.5), uw * kk, uh * kk, s.rot); ctx.restore();
+    ctx.lineWidth = 10; ctx.strokeStyle = "#e8b830"; ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI * 2); ctx.stroke();
+    x0 = 44 + 2 * r + 40;
   }
-  pill(ctx, v.page.host || "");
-  if (v.captions) {
-    const c = v.lines.findLast(c => c.s <= t);
-    if (c && t < c.e + 0.6) caption(ctx, c.text, t - c.s, v.layout === "cutout" ? H * 0.36 : H * 0.66);
-  }
+  pointer(ctx, v, t, FRAME, k, off);
+  pill(ctx, host);
+  if (showing) captionBox(ctx, showing.text, t - showing.s, x0, x1, H - 190); // above where TikTok's own overlay sits
 }
 
 // ---- Rendering --------------------------------------------------------------------------
 
 async function still(canvas, v, s) {
-  const at = Math.min(1, v.end / 2);
+  // The preview shows the first press if there is one, else a moment a few seconds in, when the page has scrolled.
+  const tap = v.keyframes.find(k => k.tap), at = Math.max(0.5, Math.min(v.end - 0.5, tap ? tap.t + 0.3 : Math.min(v.end / 2, 5)));
   let best = null;
   await decode(s.video, "video", at, at, f => { if (f.timestamp / 1e6 <= at || !best) { best?.close(); best = f; } else f.close(); });
   if (!best) return;
@@ -272,7 +459,8 @@ async function make(canvas, v, s, progress) {
   v.lines = lines({ start: 0, end: v.end }, v.words);
   const cut = v.layout === "cutout" ? await cutterFor(s, progress) : null;
   progress(0, "Cutting the sound…");
-  const snd = await sound(s, 0, v.end);
+  let snd = await sound(s, 0, v.end);
+  if (v.music) snd = { ...(snd || await pickAudioCodec()), audio: await mixAudio(v.music, v.end, snd ? [{ buffer: snd.audio, at: 0 }] : []) };
   const target = new ArrayBufferTarget();
   const muxer = new Muxer({ target, video: { codec: mux, width: W, height: H, frameRate: FPS },
     ...(snd && { audio: { codec: snd.mux, sampleRate: 48000, numberOfChannels: 2 } }), fastStart: "in-memory" });

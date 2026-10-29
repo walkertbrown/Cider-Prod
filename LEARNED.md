@@ -306,3 +306,14 @@ in Buffer's settings stay theirs.
 growing until 13 Nov, but only inside what Dailies is: a link, a store or
 a long video in; shorts, plans and Buffer drafts out. A new idea that needs
 a different app (metrics, a bio-link product) is out of bounds.
+
+## 29 Oct: the boss judges the picture, not the mechanism
+Shown eight frames of the first "Put yourself in it" render with the
+pointer and music working, the boss said "I mean, thats not good enough.
+Look at those screenshots". The features were there; the frame was ugly:
+the person over the page, legs ghosting, captions on page text. A working
+pipeline is not done until a frame of it would pass on a feed. So: compose
+the frame (window, backdrop, person in a corner, captions in their own
+box), test with footage shaped like the real input (a head-and-shoulders
+selfie, not a full-body interview), and put a frame strip in front of the
+boss before a look goes live.

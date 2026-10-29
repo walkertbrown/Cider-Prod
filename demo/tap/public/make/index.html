@@ -22,6 +22,20 @@
 .drop:hover,.drop.over,.drop:focus-within{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 7%,transparent)}
 .drop .btn{pointer-events:none}.drop,label.btn{position:relative}
 label.btn:has(input:focus-visible){outline:2px solid var(--gold);outline-offset:2px}
+/* Recording here: the camera, the words rolling over its top, a count and a timer. */
+.stage{position:relative;margin:12px 0 0;width:min(100%,360px);background:#000;border-radius:12px;overflow:hidden}
+.stage.wide{width:100%}
+.stage video{display:block;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.prompter{position:absolute;left:0;right:0;top:0;height:48%;overflow:hidden;padding:16px 18px 0;background:linear-gradient(rgba(0,0,0,.8) 60%,transparent);pointer-events:none}
+.prompter div{color:#fff;font-size:22px;line-height:1.35;font-weight:600;white-space:pre-wrap;text-shadow:0 1px 2px #000;will-change:transform}
+.stage.wide .prompter div{font-size:26px}
+.stage .count{position:absolute;inset:0;display:grid;place-items:center;font-size:120px;font-weight:800;color:#fff;text-shadow:0 2px 14px #000;pointer-events:none}
+.stage .timer{position:absolute;right:12px;bottom:12px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.6);color:#fff;font-size:14px;font-variant-numeric:tabular-nums}
+.stage .timer.on::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:#e33;margin-right:6px;animation:blink 1s steps(2) infinite}
+.stage .count:empty,.stage .timer:empty{display:none}
+@keyframes blink{50%{opacity:.2}}
+#recTake{display:block;width:min(100%,360px);max-height:640px;background:#000;border-radius:12px;margin-top:12px}
+#recBox{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .strip{display:flex;gap:6px;overflow-x:auto;padding:4px 0;margin-top:10px}.strip img{height:72px;border-radius:6px;flex:none}
 #pPages:empty{display:none}#pPages{margin:6px 0 0;padding-left:20px}
 .vhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.vhead h3{flex:1;min-width:12em}
@@ -100,9 +114,27 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
   <p class="status small" id="writeStatus"></p>
   <div class="card" id="youBox">
     <h2>Put yourself in it</h2>
-    <p class="note">Record yourself on your phone talking about this page, 10 to 90 seconds. Dailies cuts you out of your background, right here in your browser, and puts you over the page, which scrolls to what you're saying, with your words as captions. Your video stays on your device; only its sound is sent, to be turned into text.</p>
+    <p class="note">Record yourself talking about this page, 10 to 90 seconds, here or on your phone. Dailies cuts you out of your background, right here in your browser, and puts you over the page, which scrolls to what you're saying, with your words as captions. Your video stays on your device; only its sound is sent, to be turned into text.</p>
     <label class="drop" id="youDrop"><input type="file" id="youFile" class="vh" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v">
       <span class="btn sm">Choose your video</span><span class="small muted" id="youName">or drop it here</span></label>
+    <div class="actions" style="margin-top:10px"><button class="sm" id="recOpen" type="button">Or record it here</button><span class="small muted">Your camera and microphone, with the words to say rolling on screen.</span></div>
+    <div id="recBox" hidden>
+      <label class="f">What you'll say<textarea id="recText" rows="4" placeholder="Type it, or have one written from the page."></textarea></label>
+      <div class="actions small">
+        <button class="sm" id="recWrite" type="button">Write one for me</button>
+        <label class="pair">for <select id="recLen"><option>20</option><option selected>30</option><option>45</option><option>60</option></select> seconds</label>
+        <label class="pair">Pace <input type="range" id="recPace" min="100" max="200" value="150"> <span id="recWpm">150</span> words a minute</label>
+      </div>
+      <div class="stage" id="recStage" hidden>
+        <video id="recCam" autoplay muted playsinline></video>
+        <div class="prompter" id="recPrompter"><div id="recRoll"></div></div>
+        <div class="count" id="recCount"></div>
+        <div class="timer" id="recTimer"></div>
+      </div>
+      <video id="recTake" controls playsinline hidden></video>
+      <div class="actions"><button class="primary" id="recBtn" type="button">Record</button><button class="sm" id="recUse" type="button" hidden>Use this take</button><button class="sm ghost" id="recAgain" type="button" hidden>Record again</button><button class="sm ghost" id="recClose" type="button">Close</button></div>
+      <p class="status small" id="recStatus"></p>
+    </div>
     <p class="note" id="youInfo"></p>
     <div class="actions"><button class="primary" id="youBtn" disabled>Make the video</button></div>
     <p class="status small" id="youStatus"></p>

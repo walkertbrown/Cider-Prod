@@ -1,4 +1,4 @@
-# Handoff, 2026-10-29, updated after "Put yourself in it" (vibecider4)
+# Handoff, 2026-10-29, updated after "record it here" and the look redo (vibecider4)
 
 No keys or secrets here. Everything below is also in git unless noted.
 
@@ -48,9 +48,21 @@ No keys or secrets here. Everything below is also in git unless noted.
   CLOUDFLARE_ACCOUNT_ID; a local dev run needs them in a `.dev.vars`,
   deleted after). Test clips are in the scratchpad only. Headless renders
   are slow because of software H.264 encode (387 ms a frame), not the
-  cutout. Not tried with a real phone video yet: the boss's try. Left:
-  record in the page with a teleprompter, a cursor that taps a named
-  button, screenshot in the background after reading, music on this card.
+  cutout. Not tried with a real phone video yet: the boss's try.
+- Same card, later 29 Oct (plan `plan/2026-10-29-dailies-record.md`, log in
+  the second half of `actual/2026-10-29.md`): "Or record it here" (camera,
+  teleprompter, "Write one for me" via `POST /api/say`), the screenshot
+  taken ahead of time, music under the voice, and a gold pointer that
+  presses the element a spoken instruction names (`tap` on the planner's
+  keyframes). Then the boss rejected how the render looked ("I mean, thats
+  not good enough. Look at those screenshots") and the frame was recomposed:
+  page in a phone-shaped window on a blurred backdrop, person bottom-right
+  under half the frame, captions in a dark box beside them, pointer in the
+  window. Test scripts are in the scratchpad (`pwt/look.mjs` for stills in
+  about a minute, `pwt/rec5.mjs` for a full render with forced taps and
+  music, `pwt/rec4.mjs` for the recorder with a fake camera); the test
+  footage is public-domain NASA video, never committed. **Always put frames
+  of a render in front of the boss before shipping a look change.**
 - Asked the boss: the monthly AI budget. Caps stay until they answer.
 - The boss's open walkthroughs are in `forboss/` (gitignored, RULES
   "Walkthroughs for the boss"): delete the Buffer test idea ("Test idea from
