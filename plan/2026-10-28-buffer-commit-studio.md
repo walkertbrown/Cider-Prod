@@ -273,3 +273,109 @@ Polish pass 1 (from screenshots at phone and desktop width):
   space.
 - Home: the links under "Sign in" sit on their own line. /me: the "Bio
   link and counts" heading is styled like the others.
+
+## UI audit (28 Oct): notes only, nothing changed
+The boss, 28 Oct: "audit the UI one more time... Don't change anything,
+just make a note of anything you would refine and then develop a plan to
+fix it... this is for a competition. We need it to look as professional
+as possible." Fifteen states were screenshotted at 1280 and 390 px, light
+and dark (home, privacy, /me, /make empty, read, written, planned,
+rendered, store, make-more-like-this, clips found, clips rendered, key).
+
+### What I would refine
+Consistency
+1. Three style sheets. The worker's pages (/me, bio, key) use 760 px and
+   gold #b8860b; home and privacy use 720 px and 17 px text; /make uses
+   880 px, 16 px and gold #e8b830. The primary button is a different
+   yellow on /me and /make. One stylesheet with shared tokens (colours,
+   widths, heading sizes, button and card styles) served from /ui.css.
+2. No header. Each page has a bare text link at the top ("Dailies",
+   "← Your shorts"); only home has the logo. A small, identical header on
+   every page: logo, "Dailies", then Make shorts · Your shorts · Privacy.
+3. Two date formats: the plan says "Fri, Oct 30", /me says "25 Oct".
+4. Dark mode is consistent and readable; nothing to fix there except the
+   raw file inputs (below), which the OS draws.
+
+/make
+5. The channel ticks show raw ids: "instagram tiktok youtube". Should be
+   Instagram, TikTok, YouTube, ideally with the network's icon.
+6. The long-video and music pickers are the browser's raw "Choose File"
+   control. Style them as a button or a drop zone with the file name
+   shown beside it.
+7. A video card's heading ("Video 1: Free print-size comic cover...") is
+   small muted text; it should be a real heading. The card is dense: five
+   scene rows and six fields. Group them (Scenes / Words / Sound) with
+   aligned labels.
+8. The planner sits between the page card and the videos, so a 12-row plan
+   pushes the videos below the fold. Move the plan below the videos, or
+   let it close, and make the table lighter (short date column, network
+   icons instead of "Video · Instagram, TikTok, YouTube" on every row). On
+   a phone the three-column rows are cramped and the "Write this video"
+   button is squeezed.
+9. With one page image every scene shows the same thumbnail; the next
+   feature (text cards, user-added images) fixes this.
+10. The store list shows six rows in a scroll box with the "Write 5
+    videos" button inside it; the button should sit under the box.
+11. "6.2 MB. Download" is tiny; "Render again" and "Draft to Buffer" read
+    as equals. Draft should be the primary, render-again secondary.
+
+Clips
+12. The transcript excerpt is a long run-on quote with no punctuation
+    (Whisper's words). Show two lines with an ellipsis, or the first
+    sentence Whisper punctuated.
+13. "From [20.8] s to [47.4] s" inputs are tiny and overflow by 14 px on a
+    phone. A single start–end row with wider fields that wraps.
+14. The preview frame shows a large "0:21.2" timecode and a yellow bar
+    drawn over the picture. They read as debugging overlays on a product
+    screenshot; the time belongs under the preview, the bar can go.
+15. "5.5 MB, sound as Opus (this browser can't make AAC...)" is technical
+    and sounds like an error. Say "Rendered, 5.5 MB" and keep the codec
+    note for a small "details" line.
+
+/me
+16. "Made with Dailies" rows have no picture. Save a poster frame (first
+    frame as a small JPEG) when a video is drafted and show it at the left.
+17. The "Kept" label is a lone muted word at the right; make it a small
+    badge. The Kept card mixes a gold button with two outlined ones of
+    different weight.
+18. "Make a new Claude key" and "Disconnect and delete" are stacked with
+    equal weight. The destructive one gets a red outline, its own line and
+    a confirm.
+19. Empty states ("Nothing made yet") are plain sentences; each could end
+    in the button that fixes it.
+
+Home
+20. Text only: no picture of what Dailies makes. The hero should show a
+    rendered short (a looping muted MP4 or three poster frames) beside the
+    headline. The logo is a 64 px black square; a larger wordmark.
+
+To verify live (the local harness could not render them)
+21. The bio page (/u/<name>) answered "No page here" and the key page
+    "Forbidden" locally, because of test-account and origin-check
+    differences. Check both on tap.bananafest-destiny.com after the
+    stylesheet lands.
+
+### The plan, in order
+1. **One look.** A shared /ui.css with tokens (bg, fg, muted, line, gold,
+   radius, widths, type scale), button classes (primary, secondary,
+   danger), card and badge classes. Every page loads it; page styles
+   shrink to layout only. One date formatter in the worker and in app.js.
+   (Fixes 1, 3, 11, 17, 18.)
+2. **One header.** Logo + Dailies + Make shorts · Your shorts · Privacy,
+   on every page, with the current page marked. (Fixes 2, 20's logo.)
+3. **/make hierarchy.** Real headings on video cards, grouped fields,
+   network names with icons for every channel tick, styled file pickers,
+   plan moved below the videos and lightened, store button under its box.
+   (Fixes 5–8, 10.)
+4. **Clips.** Two-line excerpt, start–end row that fits a phone, timecode
+   under the preview, no overlay bar, friendlier size line. (Fixes 12–15.)
+5. **/me.** Poster frames on made rows, Kept badge, danger button apart,
+   empty states with buttons. (Fixes 16–19.)
+6. **Home hero** with a real rendered short. (Fixes 20.)
+7. **Live check** of the bio and key pages, then the full screenshot set
+   again at both widths and both schemes. (Fixes 21.)
+
+Each step is one commit, screenshotted before and after. Step 1 touches
+every page so it goes first; steps 3–5 are independent and can be split
+across days. Nothing here changes what Dailies does; the next feature
+(text cards and user images for pages with few pictures) follows step 3.
