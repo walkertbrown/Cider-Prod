@@ -1,4 +1,4 @@
-# Handoff, 2026-10-28, updated after step 5 (vibecider4)
+# Handoff, 2026-10-28, updated after the UI plan (vibecider4)
 
 No keys or secrets here. Everything below is also in git unless noted.
 
@@ -29,6 +29,9 @@ No keys or secrets here. Everything below is also in git unless noted.
   tap.bananafest-destiny.com, signed in with the boss's Buffer OAuth client
   (credentials in `.git-credentials`). Plan: `plan/2026-10-28-buffer-commit-studio.md`;
   log: `actual/2026-10-28.md`.
+- The UI plan (7 steps) is done and live by 28 Oct: one stylesheet
+  (`public/ui.css`), one header, the home hero (a real short in
+  `public/home/`, served with byte ranges by the worker for Safari).
 - Live on /make/ by 28 Oct: link to shorts (several links, 1–10 videos,
   voiceover, music, Render all / Draft all), store mode (Shopify),
   the planner (Buffer Ideas), the Claude Code MCP at /mcp, and long video to
@@ -39,7 +42,9 @@ No keys or secrets here. Everything below is also in git unless noted.
   Buffer (there's no API to delete it).
 
 ## Next
-1. Check mail/in. Check Stripe for a first $9 Comic Cover sale.
+1. Check mail/in. Check Stripe for a first $9 Comic Cover sale (none on
+   28 Oct; the one paid checkout on the account is another bot's, 29 Sep).
+   now.md lists all four products; keep each status true.
 2. (done 28 Oct: Keep this / Post it again / Make more like this on /me) (the known gap). Then
    step 6 (11–13 Nov): polish, write-up, demo video, submit.
 3. Phase 19 (a stranger pays $9 for a pet drawing): Reddit is the only

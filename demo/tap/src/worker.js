@@ -560,6 +560,20 @@ export default {
       }
       if (path === "/me") return mePage(env, ctx, req, o);
     }
+    if (path.startsWith("/home/")) return ranged(req, await env.ASSETS.fetch(req));
     return env.ASSETS.fetch(req);
   },
 };
+
+// The home page's short. Safari plays a video only from a server that answers byte ranges,
+// and the asset server sends the whole file, so the range is cut here (wrangler: run_worker_first).
+async function ranged(req, res) {
+  const r = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get("range") || "");
+  const h = new Headers(res.headers); h.set("accept-ranges", "bytes");
+  if (!r || res.status !== 200 || (!r[1] && !r[2])) return new Response(res.body, { status: res.status, headers: h });
+  const body = await res.arrayBuffer(), n = body.byteLength;
+  const a = r[1] ? +r[1] : Math.max(0, n - +r[2]), b = r[1] && r[2] ? Math.min(+r[2], n - 1) : n - 1;
+  if (a >= n || a > b) return new Response(null, { status: 416, headers: { "content-range": `bytes */${n}` } });
+  h.set("content-range", `bytes ${a}-${b}/${n}`); h.set("content-length", String(b - a + 1));
+  return new Response(body.slice(a, b + 1), { status: 206, headers: h });
+}
