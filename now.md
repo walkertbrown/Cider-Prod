@@ -1,7 +1,7 @@
-app: VibeCider bot (a service, not an app)
+app: VibeCider bot
 status: live, $50 pay link; first posts out (r/SideProject, X); no sale yet
 url: https://vibecider.bananafest-destiny.com
-blurb: Your own AI worker that takes one web app from idea to live and selling, with a public log.
+blurb: A service, not an app: your own AI worker that takes one web app from idea to live and selling, with a public log.
 since: 2026-10-15
 
 app: Dailies
