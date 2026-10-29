@@ -7,18 +7,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/logo.png">
 <script src="https://pulse.bananafest-destiny.com/p.js" data-site="tap.bananafest-destiny.com" defer></script>
+<link rel="stylesheet" href="/ui.css">
 <style>
-:root{--bg:#fbf8f1;--fg:#1d1b16;--muted:#5f5a4f;--line:#e2dccd}
-@media (prefers-color-scheme:dark){:root{--bg:#15140f;--fg:#efeadc;--muted:#a59f8f;--line:#2e2b22}}
-body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:720px;margin:0 auto;padding:40px 16px 72px}
-h1{font-size:32px;line-height:1.15;margin:12px 0 16px}h2{font-size:20px;margin:32px 0 8px}
-a{color:inherit}ul{padding-left:22px}li{margin:6px 0}.note{font-size:14px;color:var(--muted)}
-footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px;font-size:14px;color:var(--muted)}
+ul{padding-left:22px}li{margin:6px 0}
 </style>
 </head>
-<body><main>
-<a href="/">Dailies</a>
+<body>
+<header class="top"><div><a class="brand" href="/"><img src="/logo.png" alt="" width="28" height="28">Dailies</a>
+<nav><a href="/make/">Make shorts</a><a href="/me">Your shorts</a><a href="/privacy" class="opt" aria-current="page">Privacy</a></nav></div></header>
+<main><div class="prose">
 <h1>Privacy policy</h1>
 <p class="note">Last updated 28 October 2026.</p>
 
@@ -40,7 +37,7 @@ footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px;font-si
 <ul>
 <li>The access that Buffer issues to Dailies, so the page can refresh your posts a few times a day.</li>
 <li>A copy of your sent posts' text, links and thumbnails, to show the page.</li>
-<li>For each video you draft from Dailies: its title, caption, on-screen lines, the link it was made from and its Buffer tag (your newest 100), so you can keep the ones that worked and make more like them. And the posts you press "Keep this" on.</li>
+<li>For each video you draft from Dailies: its title, caption, on-screen lines, the link it was made from, its Buffer tag and a small still picture of it (your newest 100), so you can see and keep the ones that worked and make more like them. And the posts you press "Keep this" on.</li>
 <li>Dailies counts: how many times each post's link was opened, as numbers. Dailies does not store visitors' IP addresses and sets no cookies on them. You, the account owner, get one sign-in cookie, which only says which account you are signed in to.</li>
 <li>Videos you upload for drafting, for 30 days, and a daily count of script runs, voiceover lines and minutes of speech-to-text per account (to cap use).</li>
 <li>If you make a Claude key: its fingerprint, and the scripts and screenshots it sent, for 7 days.</li>
@@ -48,9 +45,10 @@ footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px;font-si
 <p>Dailies does not sell or share any of it, and does not use it to train AI models.</p>
 
 <h2>Deleting it</h2>
-<p>Press "Disconnect" in Dailies, and everything Dailies keeps for your account is deleted. You can also remove Dailies' access in your Buffer settings at any time, or ask us to delete it on <a href="https://bananafest-destiny.com/work#start">the studio's private form</a>.</p>
+<p>Press "Disconnect and delete" on your Dailies page, and everything Dailies keeps for your account is deleted. You can also remove Dailies' access in your Buffer settings at any time, or ask us to delete it on <a href="https://bananafest-destiny.com/work#start">the studio's private form</a>.</p>
 
 <h2>Who runs it</h2>
 <p>Dailies is run by Bananafest Destiny on Cloudflare. Pages on this site have Bananafest Destiny's own visit counter (pulse.bananafest-destiny.com), which counts page loads.</p>
-<footer>Dailies is built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>, for Buffer Commit. Its log is public at <a href="https://github.com/walkertbrown/Cider-Prod">github.com/walkertbrown/Cider-Prod</a>.</footer>
-</main></body></html>
+</div></main>
+<footer class="foot">Dailies is built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>, for Buffer Commit. <a href="/privacy">Privacy</a> · <a href="https://github.com/walkertbrown/Cider-Prod">Public log</a></footer>
+</body></html>

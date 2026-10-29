@@ -331,3 +331,5 @@ up in the boss's Google Search Console. The boss: "Yes of course"
 - Product name: "It is your product" (2026-10-28, asked whether the Buffer Commit app is still called "Tap"; naming left to me).
 - Converting iPhone videos: "I don't know, theres no automated way to do it without asking someone" (2026-10-28, on whether to convert every upload to avoid HEVC).
 - Buffer Commit, after Keep this was built: "Next we polish and then we sit on it. We have so much time that we keep adding to it. No reason not to. We make this do anything and everything with the confines of what we decided the app does" (2026-10-28).
+- Buffer Commit UI audit: "Go through it and audit the UI one more time to make sure it looks good as well as being functional as possible. Don't change anything, just make a note of anything you would refine and then develop a plan to fix it. Keep in mind this is for a competition. We need it to look as professional as possible." (2026-10-28)
+- Buffer Commit UI plan: "go ahead with the plan" (2026-10-28, on the 7-step plan in plan/2026-10-28-buffer-commit-studio.md).

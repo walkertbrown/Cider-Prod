@@ -44,6 +44,11 @@ No keys or secrets here. Everything below is also in git unless noted.
    step 6 (11–13 Nov): polish, write-up, demo video, submit.
 3. Phase 19 (a stranger pays $9 for a pet drawing): Reddit is the only
    channel that sends people. Bobo question to the boss still open.
+4. Market-Nana's mail of 28 Oct (mail/read, thread sales-page-proof, no reply
+   needed): the VibeCider page's proof list leaves out ShelfCall (Google Play
+   since 26 Oct) and Hullbound (Google Play since 24 Oct). After the UI plan,
+   check both on their public pages and, if they hold, add them to the list.
+   The $18.09 line stays as it is.
 
 ## Boss words since 24 Oct not elsewhere
 - All logged in FACTS.md (the visit counter). The boss also asked "When is

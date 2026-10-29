@@ -1,5 +1,6 @@
 // Link to Shorts, the browser half: read → scripts → render (canvas, WebCodecs, MP4) → upload → draft.
 import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs";
+import { net } from "./nets.js";
 
 const W = 1080, H = 1920, FPS = 30, END = 2.5;
 const $ = id => document.getElementById(id);
@@ -97,8 +98,10 @@ $("storeBtn").onclick = async () => {
 
 // ---- The planner: a month of dated items; write any video from it, or save it as Buffer Ideas ----
 
+// One date format across Dailies, as on /me: "Fri 30 Oct".
+const day = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+
 let plan = [];
-const NET = { instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", twitter: "X", bluesky: "Bluesky", threads: "Threads", linkedin: "LinkedIn", facebook: "Facebook", mastodon: "Mastodon" };
 function showPlan() {
   $("planBox").hidden = false;
   if (!$("start").value) $("start").value = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -109,22 +112,24 @@ $("planBtn").onclick = async () => {
   try {
     ({ items: plan } = await call("/api/plan", { page, start: $("start").value, weeks: +$("weeks").value, perWeek: +$("perWeek").value }));
     $("planStatus").textContent = `${plan.length} posts.`;
-    const day = d => new Date(d + "T12:00:00Z").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-    $("planList").replaceChildren(el("table", { className: "plan" }, ...plan.map(it => {
-      const act = it.kind === "video" ? el("button", { textContent: "Write this video", async onclick() {
+    $("planList").replaceChildren(el("div", { className: "plan" }, ...plan.map(it => {
+      const act = it.kind === "video" ? el("button", { className: "sm", textContent: "Write this video", async onclick() {
         this.disabled = true; this.textContent = "Writing…";
         try {
           const out = await call("/api/scripts", { page: it.page || page, count: 1, angle: it });
-          for (const v of out.videos) { v.angle = v.angle || it.angle; $("videos").append(videoCard(v, cards.length)); }
-          allBox(); this.textContent = "Written below";
+          let first = null;
+          for (const v of out.videos) { v.angle = v.angle || it.angle; const c = videoCard(v, cards.length); first ??= c; $("videos").append(c); }
+          allBox(); this.textContent = "Added above";
+          first?.scrollIntoView({ behavior: "smooth", block: "start" });
         } catch (err) { this.textContent = "Write this video"; this.disabled = false; $("planStatus").textContent = err.message; $("planStatus").className = "status small bad"; }
       } }) : "";
-      return el("tr", {},
-        el("td", {}, el("input", { type: "checkbox", checked: true, onchange() { it.skip = !this.checked; } })),
-        el("td", { className: "d", textContent: day(it.date) }),
-        el("td", {}, el("strong", { textContent: it.angle }), el("div", { textContent: it.hook }),
-          el("div", { className: "small muted", textContent: `${it.kind === "video" ? "Video" : "Text"} · ${it.services.map(s => NET[s] || s).join(", ")}${it.text ? " · " + it.text : ""}` })),
-        el("td", {}, act));
+      return el("div", { className: "it" },
+        el("input", { type: "checkbox", className: "ck", checked: true, title: "Save as an Idea", onchange() { it.skip = !this.checked; } }),
+        el("div", { className: "d", textContent: day(it.date) }),
+        el("div", { className: "body" }, el("strong", { textContent: it.angle }), el("div", { textContent: it.hook }),
+          it.text ? el("div", { className: "note", textContent: it.text }) : "",
+          el("div", { className: "nets" }, el("span", { className: "badge", textContent: it.kind === "video" ? "Video" : "Text" }), ...it.services.map(s => net(s, true)))),
+        el("div", { className: "act" }, act));
     })));
     $("planActs").hidden = !plan.length;
   } catch (err) { $("planStatus").textContent = err.message; $("planStatus").className = "status small bad"; }
@@ -148,10 +153,10 @@ function videoCard(v, n) {
   const scenes = el("div");
   const sceneRow = s => {
     const thumb = s.image == null ? el("div", { className: "noimg" }) : el("img", { src: img(pg(v).images[s.image]), alt: "" });
-    const text = el("textarea", { value: s.text, rows: 2, oninput() { s.text = this.value; } });
-    const pick = el("select", { title: "Image", onchange() { s.image = this.value === "" ? null : +this.value;
+    const text = el("textarea", { value: s.text, rows: 2, ariaLabel: "On-screen line", oninput() { s.text = this.value; } });
+    const pick = el("select", { ariaLabel: "Picture", onchange() { s.image = this.value === "" ? null : +this.value;
       const t = s.image == null ? el("div", { className: "noimg" }) : el("img", { src: img(pg(v).images[s.image]), alt: "" }); row.firstChild.replaceWith(t); } },
-      el("option", { value: "", textContent: "none" }), ...pg(v).images.map((_, i) => el("option", { value: i, textContent: `image ${i + 1}`, selected: s.image === i })));
+      el("option", { value: "", textContent: "No picture" }), ...pg(v).images.map((_, i) => el("option", { value: i, textContent: `Picture ${i + 1}`, selected: s.image === i })));
     const row = el("div", { className: "scene" }, thumb, text, pick);
     return row;
   };
@@ -160,47 +165,72 @@ function videoCard(v, n) {
   const caption = el("textarea", { value: v.caption, rows: 3, oninput() { v.caption = this.value; } });
   const hashtags = el("input", { type: "text", value: (v.hashtags || []).map(t => "#" + t).join(" "), oninput() { v.hashtags = this.value.split(/[\s,#]+/).filter(Boolean); } });
   const canvas = el("canvas", { width: W, height: H, className: "preview" });
-  const status = el("p", { className: "status small" });
-  const renderBtn = el("button", { className: "primary", textContent: "Render" });
-  const draftBox = el("div", { hidden: true });
   const music = musicControls(v);
-  const voice = el("select", { style: "width:auto", onchange() { v.voice = this.value; } },
+  const voice = el("select", { onchange() { v.voice = this.value; } },
     el("option", { value: "", textContent: "No voiceover" }),
     ...[["coral", "Coral (warm)"], ["nova", "Nova (bright)"], ["sage", "Sage (calm)"], ["ash", "Ash (low)"], ["onyx", "Onyx (deep)"], ["verse", "Verse (lively)"]]
       .map(([value, textContent]) => el("option", { value, textContent })));
   const state = { v, music, mp4: null, uploaded: null };
   cards.push(state);
-  const side = el("div", {}, canvas, status, el("div", { className: "row" }, renderBtn), draftBox);
+  const side = sidePanel(canvas);
   const card = el("div", { className: "card" },
-    el("div", { className: "small muted", textContent: `Video ${n + 1}: ${v.angle}` }),
+    el("div", { className: "vhead" }, el("span", { className: "badge gold", textContent: `Video ${n + 1}` }), el("h3", { textContent: v.angle })),
     el("div", { className: "video" },
-      el("div", {}, scenes, el("label", { className: "small muted", textContent: "Title (YouTube, TikTok)" }), title,
-        el("label", { className: "small muted", textContent: "Caption" }), caption,
-        el("label", { className: "small muted", textContent: "Hashtags (each network gets as many as suit it)" }), hashtags,
-        el("label", { className: "small muted", style: "display:block;margin-top:10px", textContent: "Voiceover (reads each line aloud; scenes stretch to fit)" }), voice, music.box),
-      side));
+      el("div", {},
+        el("div", { className: "grp", textContent: "On screen" }), scenes,
+        el("div", { className: "grp", textContent: "Post" }),
+        el("label", { className: "f" }, "Title (YouTube, TikTok)", title),
+        el("label", { className: "f" }, "Caption", caption),
+        el("label", { className: "f" }, "Hashtags (each network gets as many as suit it)", hashtags),
+        el("div", { className: "grp", textContent: "Sound" }),
+        el("label", { className: "f" }, "Voiceover (reads each line aloud; scenes stretch to fit)", voice), music.box),
+      side.box));
   drawStill(canvas, v);
 
-  state.render = async () => {
-    renderBtn.disabled = true; status.className = "status small";
+  state.render = () => side.render(state, (p, msg) => msg || `Rendering… ${Math.round(p * 100)}%`,
+    progress => render(canvas, v, progress), `dailies-video-${n + 1}.mp4`);
+  side.btn.onclick = () => state.render();
+  return card;
+}
+
+// The preview column of a video or clip card: the still (then the video), progress, the
+// result, Render, and the draft box once it's rendered.
+function sidePanel(canvas) {
+  const status = el("p", { className: "status small" }), result = el("div");
+  const btn = el("button", { className: "primary", textContent: "Render" });
+  const draftBox = el("div", { hidden: true });
+  const box = el("div", { className: "side" }, canvas, status, result, el("div", { className: "actions" }, btn), draftBox);
+  // Make the video; `checks` returns a plain-words reason it can't be drafted, if any.
+  const render = async (state, say, make, name, checks = () => "") => {
+    btn.disabled = true; status.className = "status small";
     try {
-      state.mp4 = null; state.uploaded = null;
-      side.querySelector("video")?.remove(); canvas.hidden = false; draftBox.replaceChildren(); draftBox.hidden = true;
-      const mp4 = await render(canvas, v, (p, msg) => status.textContent = msg || `Rendering… ${Math.round(p * 100)}%`);
+      state.mp4 = null; state.uploaded = null; state.poster = poster(canvas);
+      box.querySelector("video")?.remove(); canvas.hidden = false; result.replaceChildren(); draftBox.replaceChildren(); draftBox.hidden = true;
+      const mp4 = await make((p, msg) => status.textContent = say(p, msg));
       const video = el("video", { src: URL.createObjectURL(mp4), controls: true, playsInline: true });
-      canvas.hidden = true; canvas.after(video);
-      const notes = [mp4.vp9 && "VP9 (this browser can't make H.264; some networks may refuse it, and Chrome makes H.264)", mp4.opus && "music as Opus (this browser can't make AAC; some networks may refuse it)"].filter(Boolean);
-      status.textContent = `${(mp4.size / 1048576).toFixed(1)} MB${notes.length ? ", " + notes.join(", ") : ""}. `;
-      status.append(el("a", { href: video.src, download: `tap-video-${n + 1}.mp4`, textContent: "Download" }));
-      state.mp4 = mp4;
-      await showDraft(draftBox, state);
-      renderBtn.textContent = "Render again";
+      canvas.hidden = true; canvas.after(video); status.textContent = "";
+      const why = checks(mp4);
+      const notes = [mp4.vp9 && "Made as VP9: this browser can't make H.264, and some networks may refuse VP9. Chrome makes H.264.",
+        mp4.opus && "Sound made as Opus: this browser can't make AAC, and some networks may refuse Opus."].filter(Boolean);
+      result.replaceChildren(el("div", { className: "actions" }, el("span", { className: "badge gold", textContent: "Ready" }),
+        el("span", { className: "small muted", textContent: `${(mp4.size / 1048576).toFixed(1)} MB` }),
+        el("a", { className: "btn sm", href: video.src, download: name, textContent: "Download" })),
+        ...(why ? [el("p", { className: "small bad", textContent: why })] : []), ...notes.map(t => el("p", { className: "note", textContent: t })));
+      state.mp4 = why ? null : mp4;
+      if (state.mp4) await showDraft(draftBox, state);
+      btn.textContent = "Render again"; btn.className = "";
     } catch (err) { status.textContent = err.message; status.className = "status small bad"; }
-    renderBtn.disabled = false;
+    btn.disabled = false;
     allBox();
   };
-  renderBtn.onclick = () => state.render();
-  return card;
+  return { box, btn, render };
+}
+
+// A small still of the preview for the video's row on /me, taken just before it renders.
+function poster(canvas) {
+  const c = el("canvas", { width: 216, height: 384 });
+  c.getContext("2d").drawImage(canvas, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.75);
 }
 
 // ---- Music: a file from the visitor's device, mixed in at render time --------
@@ -209,15 +239,17 @@ const cards = [];
 const audioCtx = () => (audioCtx.c ??= new AudioContext());
 
 function musicControls(v) {
-  const file = el("input", { type: "file", accept: "audio/*,.mp3,.m4a,.wav,.aac,.ogg" });
-  const name = el("span", { className: "small muted" });
-  const start = el("input", { type: "number", min: 0, step: 1, value: 0, style: "width:5em", title: "Start the song this many seconds in" });
+  const file = el("input", { type: "file", className: "vh", accept: "audio/*,.mp3,.m4a,.wav,.aac,.ogg" });
+  const pick = el("label", { className: "btn sm" }, file, "Add music");
+  const name = el("span", { className: "small muted", textContent: "A song file from your device (optional)" });
+  const start = el("input", { type: "number", min: 0, step: 1, value: 0, style: "width:5.5em", title: "Start the song this many seconds in" });
   const vol = el("input", { type: "range", min: 5, max: 100, value: 80, title: "Volume" });
-  const clear = el("button", { type: "button", textContent: "Remove", hidden: true });
-  const all = el("button", { type: "button", textContent: "Use on every video", hidden: true });
-  const opts = el("div", { className: "row small", hidden: true }, el("label", {}, "Start at ", start, " s"), el("label", {}, "Volume ", vol), all, clear);
+  const clear = el("button", { type: "button", className: "sm ghost", textContent: "Remove", hidden: true });
+  const all = el("button", { type: "button", className: "sm", textContent: "Use on every video", hidden: true });
+  const opts = el("div", { className: "actions small", hidden: true }, el("label", { className: "pair" }, "Start at", start, "s"), el("label", { className: "pair" }, "Volume", vol), all, clear);
   const set = (m, label) => {
-    v.music = m; name.textContent = label || ""; opts.hidden = !m; clear.hidden = !m; all.hidden = !m || cards.length < 2;
+    v.music = m; name.textContent = label || "A song file from your device (optional)"; opts.hidden = !m; clear.hidden = !m; all.hidden = !m || cards.length < 2;
+    pick.lastChild.textContent = m ? "Change music" : "Add music";
     if (m) { start.value = m.start; vol.value = Math.round(m.volume * 100); } else file.value = "";
   };
   file.onchange = async () => {
@@ -233,9 +265,9 @@ function musicControls(v) {
   vol.oninput = () => v.music && (v.music.volume = +vol.value / 100);
   clear.onclick = () => set(null);
   all.onclick = () => cards.forEach(c => c.v !== v && c.music.set({ ...v.music }, `${v.music.name} (${Math.round(v.music.buffer.duration)} s)`));
-  const box = el("div", { style: "margin-top:10px" },
-    el("label", { className: "small muted", textContent: "Music (optional, a file from your device)" }), el("div", { className: "row" }, file, name), opts,
-    el("p", { className: "small muted", style: "margin:4px 0 0", textContent: "Use music you have the rights to. Networks can mute or block songs they recognise." }));
+  const box = el("div", {},
+    el("label", { className: "f", textContent: "Music" }), el("div", { className: "actions", style: "margin-top:6px" }, pick, name), opts,
+    el("p", { className: "note", textContent: "Use music you have the rights to. Networks can mute or block songs they recognise." }));
   return { box, set };
 }
 
@@ -303,18 +335,18 @@ async function draft(state, chosen) {
   const id = await upload(state);
   const v = state.v, lines = (v.scenes || []).map(x => x.text);
   const { results } = await call("/api/draft", { video: id, channels: chosen, caption: v.caption, title: v.title, hashtags: v.hashtags, angle: v.angle,
-    hook: v.hook || lines[0] || "", lines, link: v.scenes ? pg(v)?.url || "" : "" });
+    hook: v.hook || lines[0] || "", lines, link: v.scenes ? pg(v)?.url || "" : "", poster: state.poster });
   return results;
 }
 
 async function showDraft(box, state) {
   channels ??= (await call("/api/channels", null, "GET")).channels;
-  if (!channels.length) { box.append(el("p", { className: "small muted", textContent: "No Buffer channels that take video are connected." })); box.hidden = false; return; }
+  if (!channels.length) { box.append(el("p", { className: "note", textContent: "No Buffer channels that take video are connected." })); box.hidden = false; return; }
   const ticks = channels.map(c => el("input", { type: "checkbox", value: c.id, checked: ["instagram", "tiktok", "youtube"].includes(c.service) }));
   const btn = el("button", { className: "primary", textContent: "Draft to Buffer" });
-  const out = el("p", { className: "status small" });
-  box.append(el("p", { className: "small", style: "margin:10px 0 4px", textContent: "Draft it to:" }),
-    ...channels.map((c, i) => el("label", { className: "ch" }, ticks[i], c.service)), el("div", { className: "row" }, btn), out);
+  const out = el("div", { className: "status small" });
+  box.append(el("label", { className: "f", textContent: "Draft it to" }),
+    el("div", {}, ...channels.map((c, i) => el("label", { className: "ch" }, ticks[i], net(c.service)))), el("div", { className: "actions" }, btn), out);
   box.hidden = false;
   btn.onclick = async () => {
     const chosen = ticks.filter(t => t.checked).map(t => t.value);
@@ -322,7 +354,7 @@ async function showDraft(box, state) {
     btn.disabled = true; out.className = "status small"; out.textContent = "Uploading and drafting…";
     try {
       const results = await draft(state, chosen);
-      out.replaceChildren(...results.map(r => el("div", { className: r.ok ? "" : "bad", textContent: r.ok ? `${r.channel}: in your Buffer drafts` : `${r.channel}: ${r.error}` })));
+      out.replaceChildren(...results.map(r => el("div", { className: r.ok ? "good" : "bad", textContent: r.ok ? `${r.channel}: in your Buffer drafts` : `${r.channel}: ${r.error}` })));
       if (results.some(r => !r.ok)) btn.disabled = false;
     } catch (err) { out.textContent = err.message; out.className = "status small bad"; btn.disabled = false; }
   };
@@ -336,11 +368,12 @@ async function allBox() {
   box.hidden = false;
   const made = cards.filter(c => c.mp4).length;
   $("allMade").textContent = `${made} of ${cards.length} rendered.`;
-  $("draftAll").disabled = !made;
+  $("renderAll").className = made < cards.length ? "primary" : "";
+  $("draftAll").disabled = !made; $("allDraft").hidden = !made;
   if (made && !$("allTicks").children.length) {
     channels ??= (await call("/api/channels", null, "GET")).channels;
     $("allTicks").replaceChildren(...channels.map(c => el("label", { className: "ch" },
-      el("input", { type: "checkbox", value: c.id, checked: ["instagram", "tiktok", "youtube"].includes(c.service) }), c.service)));
+      el("input", { type: "checkbox", value: c.id, checked: ["instagram", "tiktok", "youtube"].includes(c.service) }), net(c.service))));
   }
 }
 
@@ -529,7 +562,7 @@ async function render(canvas, v, progress) {
 }
 
 // Shared with clips.js (long video to clips).
-export { $, el, call, cards, allBox, showDraft, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, W, H, FPS };
+export { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, W, H, FPS };
 
 // ---- Make more like this (/make/?like=<kept post>): read its link, and write in its manner ----
 
@@ -555,7 +588,7 @@ if (job) {
   $("readStatus").textContent = "Loading the scripts Claude Code sent…";
   call(`/api/job?id=${encodeURIComponent(job)}`, null, "GET").then(out => {
     page = out.page;
-    $("readForm").hidden = true;
+    $("starts").hidden = true;
     $("pTitle").textContent = page.title || page.host;
     $("pHost").textContent = `From Claude Code${page.host ? " · " + page.host : ""}`;
     $("pPages").replaceChildren();

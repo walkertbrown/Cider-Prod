@@ -7,23 +7,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/logo.png">
 <script src="https://pulse.bananafest-destiny.com/p.js" data-site="tap.bananafest-destiny.com" defer></script>
+<link rel="stylesheet" href="/ui.css">
 <style>
-:root{--bg:#fbf8f1;--fg:#1d1b16;--muted:#5f5a4f;--line:#e2dccd}
-@media (prefers-color-scheme:dark){:root{--bg:#15140f;--fg:#efeadc;--muted:#a59f8f;--line:#2e2b22}}
-body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:720px;margin:0 auto;padding:40px 16px 72px}
-h1{font-size:32px;line-height:1.15;margin:12px 0 16px}h2{font-size:20px;margin:32px 0 8px}
-a{color:inherit}ul{padding-left:22px}li{margin:6px 0}.note{font-size:14px;color:var(--muted)}
-footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px;font-size:14px;color:var(--muted)}
+.feats{padding-left:22px}.feats li{margin:8px 0}
 </style>
 </head>
-<body><main>
-<img src="/logo.png" alt="" width="64" height="64">
+<body>
+<header class="top"><div><a class="brand" href="/"><img src="/logo.png" alt="" width="28" height="28">Dailies</a>
+<nav><a href="/make/">Make shorts</a><a href="/me">Your shorts</a><a href="/privacy" class="opt">Privacy</a></nav></div></header>
+<main><div class="prose">
 <h1>Short videos for every day, drafted into Buffer.</h1>
-<p>Dailies makes the posts you mean to make, and puts them in your Buffer as drafts for you to check and send.</p>
-<p><a href="/auth/start" style="display:inline-block;padding:10px 18px;border-radius:8px;background:#e8b830;color:#15140f;font-weight:600;text-decoration:none">Sign in with Buffer</a></p>
-<p class="note">Signed in already? <a href="/make/">Make shorts</a> · <a href="/me">Your shorts</a></p>
-<ul>
+<p class="lede">Dailies makes the posts you mean to make, and puts them in your Buffer as drafts for you to check and send.</p>
+<div class="actions"><a class="btn primary" href="/auth/start">Sign in with Buffer</a></div>
+<ul class="feats">
 <li><b>From a link.</b> Paste a product, an app, an article or a listing, or a few. Dailies writes as many short scripts as you ask for and renders vertical videos in your browser, with captions, voiceover and your own music.</li>
 <li><b>From a store.</b> Paste a Shopify store and each product gets its own short.</li>
 <li><b>From a long video.</b> Pick a talk, a stream or a demo. Dailies finds the best moments, cuts them to 9:16 and captions them, without uploading the whole video.</li>
@@ -31,6 +27,7 @@ footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px;font-si
 <li><b>Building in public.</b> Add Dailies to Claude Code. After you ship, it sends what changed, and you get a video to review and draft.</li>
 </ul>
 <p>Nothing posts by itself: every video and post lands in Buffer as a draft.</p>
-<p class="note">Being built now, in public, for Buffer Commit (28 October to 13 November 2026). <a href="/privacy">Privacy</a>.</p>
-<footer>Dailies is built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>, for Buffer Commit. Its log is public at <a href="https://github.com/walkertbrown/Cider-Prod">github.com/walkertbrown/Cider-Prod</a>.</footer>
-</main></body></html>
+<p class="note">Being built now, in public, for Buffer Commit (28 October to 13 November 2026).</p>
+</div></main>
+<footer class="foot">Dailies is built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>, for Buffer Commit. <a href="/privacy">Privacy</a> · <a href="https://github.com/walkertbrown/Cider-Prod">Public log</a></footer>
+</body></html>

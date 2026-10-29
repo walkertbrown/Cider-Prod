@@ -3,10 +3,10 @@
 // word-timed captions (WebCodecs decode → canvas → encode → MP4). The video itself never leaves the device.
 import { createFile, DataStream } from "https://cdn.jsdelivr.net/npm/mp4box@0.5.3/+esm";
 import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs";
-import { $, el, call, cards, allBox, showDraft, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, W, H, FPS } from "./app.js";
+import { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, W, H, FPS } from "./app.js";
 
 const PIECE = 600, RATE = 16000, MAX_MINUTES = 60, WINDOW = 16 * 1048576;
-let src = null, words = [];
+let src = null, words = [], segments = [];
 
 // ---- Reading the file ---------------------------------------------------------
 
@@ -285,6 +285,7 @@ const say = (msg, bad) => { $("clipStatus").textContent = msg; $("clipStatus").c
 
 $("clipFile").onchange = async () => {
   const f = $("clipFile").files[0]; src = null; $("clipBtn").disabled = true; $("clipInfo").textContent = "";
+  $("clipName").textContent = f ? f.name : "or drop it here";
   if (!f) return;
   say("Reading the video…");
   try {
@@ -293,17 +294,27 @@ $("clipFile").onchange = async () => {
     await decoderFor(src.video, "video").catch(e => { src = null; throw e; });
     if (src.duration > MAX_MINUTES * 60) { const m = Math.round(src.duration / 60); src = null; throw new Error(`Up to ${MAX_MINUTES} minutes for now. This one is ${m}.`); }
     const up = src.rot % 180 ? [src.height, src.width] : [src.width, src.height];
-    $("clipInfo").textContent = `${mmss(src.duration)} · ${up[0]}×${up[1]} · ${src.video.info.codec}${src.audio ? "" : " · no sound"}`;
+    $("clipInfo").textContent = `${mmss(src.duration)} long · ${up[0]}×${up[1]}${src.audio ? "" : " · no sound"}`;
     $("clipCount").value = String(Math.max(1, Math.min(10, Math.round(src.duration / 120)) || 1));
     $("clipBtn").disabled = false; say("");
   } catch (err) { say(err.message, true); }
+};
+
+// A video dropped on the picker counts as picked.
+const drop = $("clipDrop");
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => {
+  e.preventDefault(); drop.classList.remove("over");
+  if (!e.dataTransfer.files.length || $("clipFile").disabled) return;
+  $("clipFile").files = e.dataTransfer.files; $("clipFile").dispatchEvent(new Event("change"));
 };
 
 $("clipBtn").onclick = async () => {
   $("clipBtn").disabled = true; $("clipFile").disabled = true;
   try {
     const heard = await listen(msg => say(msg));
-    words = heard.words;
+    ({ words, segments } = heard);
     say("Picking the best moments… (about 10–30 seconds)");
     const { clips } = await call("/api/moments", { segments: heard.segments, duration: src.duration, count: +$("clipCount").value });
     if (!clips.length) throw new Error("No stand-alone moments were found in this video.");
@@ -327,56 +338,42 @@ $("clipBtn").onclick = async () => {
 };
 
 function clipCard(v, n) {
-  const said = () => words.filter(w => w.s >= v.start && w.e <= v.end).map(w => w.w).join(" ");
-  const quote = el("p", { className: "small muted", style: "margin:4px 0 8px" });
-  const showQuote = () => quote.textContent = `${mmss(v.start)}–${mmss(v.end)} (${Math.round(v.end - v.start)} s): “${said().slice(0, 400)}”`;
-  const num = (key, label) => el("label", { className: "small" }, label + " ", el("input", { type: "number", step: 0.1, min: 0, max: src.duration, value: v[key].toFixed(1), style: "width:6em",
-    onchange() { const x = +this.value; if (key === "start" ? x < v.end - 1 : x > v.start + 1) { v[key] = Math.max(0, Math.min(src.duration, x)); showQuote(); redraw(); } else this.value = v[key].toFixed(1); } }), " s");
-  const title = el("input", { type: "text", value: v.title, maxLength: 100, oninput() { v.title = this.value; } });
+  // What was said, from the speech-to-text's punctuated sentences; two lines until it's clicked.
+  const said = () => segments.filter(g => g.e > v.start + 0.2 && g.s < v.end - 0.2).map(g => g.t.trim()).join(" ");
+  const quote = el("p", { className: "quote note", title: "Show it all", tabIndex: 0, onclick() { this.classList.toggle("open"); }, onkeydown(e) { if (e.key === "Enter") this.click(); } });
+  const span = el("span", { className: "small muted" });
+  const showQuote = () => { quote.textContent = `“${said()}”`; span.textContent = `${mmss(v.start)}–${mmss(v.end)} · ${Math.round(v.end - v.start)} s`; };
+  const num = (key, label) => el("label", { className: "f" }, label, el("input", { type: "number", step: 0.1, min: 0, max: src.duration, value: v[key].toFixed(1),
+    onchange() { const x = +this.value; if (key === "start" ? x < v.end - 1 : x > v.start + 1) { v[key] = Math.max(0, Math.min(src.duration, x)); showQuote(); redraw(); } else this.value = v[key].toFixed(1); } }));
+  const head = el("h3", { textContent: v.title });
+  const title = el("input", { type: "text", value: v.title, maxLength: 100, oninput() { v.title = this.value; head.textContent = this.value; } });
   const cap = el("textarea", { value: v.caption, rows: 3, oninput() { v.caption = this.value; } });
   const hashtags = el("input", { type: "text", value: (v.hashtags || []).map(t => "#" + t).join(" "), oninput() { v.hashtags = this.value.split(/[\s,#]+/).filter(Boolean); } });
-  const layout = el("select", { style: "width:auto", onchange() { v.layout = this.value; redraw(); } },
-    el("option", { value: "fit", textContent: "Fit: whole frame, blurred behind, title above", selected: v.layout === "fit" }),
-    el("option", { value: "fill", textContent: "Fill: crop the middle", selected: v.layout === "fill" }));
+  const layout = el("select", { onchange() { v.layout = this.value; redraw(); } },
+    el("option", { value: "fit", textContent: "Fit: whole picture, blurred behind", selected: v.layout === "fit" }),
+    el("option", { value: "fill", textContent: "Fill: crop to the middle", selected: v.layout === "fill" }));
   const caps = el("input", { type: "checkbox", checked: true, onchange() { v.captions = this.checked; redraw(); } });
   const canvas = el("canvas", { width: W, height: H, className: "preview" });
-  const status = el("p", { className: "status small" });
-  const renderBtn = el("button", { className: "primary", textContent: "Render" });
-  const draftBox = el("div", { hidden: true });
   const state = { v, music: { set() {} }, mp4: null, uploaded: null };
   cards.push(state);
   const redraw = () => still(canvas, v).catch(() => {});
-  const side = el("div", {}, canvas, status, el("div", { className: "row" }, renderBtn), draftBox);
+  const side = sidePanel(canvas);
   const card = el("div", { className: "card" },
-    el("div", { className: "small muted", textContent: `Clip ${n + 1}: ${v.title}` }),
+    el("div", { className: "vhead" }, el("span", { className: "badge gold", textContent: `Clip ${n + 1}` }), head, span),
     el("div", { className: "video" },
-      el("div", {}, quote, el("div", { className: "row" }, num("start", "From"), num("end", "to")),
-        el("label", { className: "small muted", style: "display:block;margin-top:10px", textContent: "Layout" }), layout,
-        el("label", { className: "ch small" }, caps, "Captions from the words spoken"),
-        el("label", { className: "small muted", style: "display:block", textContent: "Title (on the clip in Fit, and for YouTube and TikTok)" }), title,
-        el("label", { className: "small muted", textContent: "Caption" }), cap,
-        el("label", { className: "small muted", textContent: "Hashtags" }), hashtags),
-      side));
+      el("div", {}, quote,
+        el("div", { className: "grp", textContent: "The cut" }),
+        el("div", { className: "times" }, num("start", "Start (s)"), num("end", "End (s)")),
+        el("label", { className: "f" }, "Layout", layout),
+        el("div", { style: "margin-top:12px" }, el("label", { className: "ch" }, caps, "Captions from the words spoken")),
+        el("div", { className: "grp", textContent: "Post" }),
+        el("label", { className: "f" }, "Title (on the clip in Fit, and for YouTube and TikTok)", title),
+        el("label", { className: "f" }, "Caption", cap),
+        el("label", { className: "f" }, "Hashtags", hashtags)),
+      side.box));
   showQuote();
-  state.render = async () => {
-    renderBtn.disabled = true; status.className = "status small";
-    try {
-      state.mp4 = null; state.uploaded = null;
-      side.querySelector("video")?.remove(); canvas.hidden = false; draftBox.replaceChildren(); draftBox.hidden = true;
-      const mp4 = await cut(canvas, v, (p, msg) => status.textContent = msg || `Cutting… ${Math.round(p * 100)}%`);
-      const video = el("video", { src: URL.createObjectURL(mp4), controls: true, playsInline: true });
-      canvas.hidden = true; canvas.after(video);
-      const notes = [mp4.vp9 && "VP9 (this browser can't make H.264; some networks may refuse it)", mp4.opus && "sound as Opus (this browser can't make AAC; some networks may refuse it)"].filter(Boolean);
-      status.textContent = `${(mp4.size / 1048576).toFixed(1)} MB${notes.length ? ", " + notes.join(", ") : ""}. `;
-      status.append(el("a", { href: video.src, download: `tap-clip-${n + 1}.mp4`, textContent: "Download" }));
-      if (mp4.size > 25 * 1048576) status.append(el("span", { className: "bad", textContent: " Over 25 MB, so it can't be drafted from here. Shorten it." }));
-      state.mp4 = mp4.size > 25 * 1048576 ? null : mp4;
-      if (state.mp4) await showDraft(draftBox, state);
-      renderBtn.textContent = "Render again";
-    } catch (err) { status.textContent = err.message; status.className = "status small bad"; }
-    renderBtn.disabled = false;
-    allBox();
-  };
-  renderBtn.onclick = () => state.render();
+  state.render = () => side.render(state, (p, msg) => msg || `Cutting… ${Math.round(p * 100)}%`, progress => cut(canvas, v, progress), `dailies-clip-${n + 1}.mp4`,
+    mp4 => mp4.size > 25 * 1048576 ? "Over 25 MB, so it can't be drafted from here. Shorten it." : "");
+  side.btn.onclick = () => state.render();
   return { card, still: redraw };
 }

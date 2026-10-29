@@ -7,6 +7,7 @@
 //   POST /me/again        Post it again: tagged drafts in Buffer, never sent
 //   POST /me/forget       drop a kept post, and its template and tag
 //   POST /me/disconnect   delete everything Dailies keeps for the account
+//   GET  /me/poster/<tag> a drafted video's still, for its row on /me
 //   GET  /u/<name>        the public bio page: one tile per post
 //   GET  /p/<name>/<post> count a tap, then send the visitor on
 //   GET  /go/<name>       the bio page's skip link, counted the same way
@@ -18,6 +19,7 @@
 //     ses:<sid> → acct · n:<acct>:<post> {p, f} counts. Visitors get no cookie.
 //     v:<id> a rendered MP4 (30 days) · cap:<day>:<acct|all> script runs
 //     key:<sha256> → acct · job:<id> scripts from Claude Code (7 days) · img:<id> a screenshot (7 days)
+//     pf:<acct>:<tag> a drafted video's still (small JPEG), as long as its record
 
 import { api, serveVideo } from "./make.js";
 import { mcp, sha256 } from "./mcp.js";
@@ -35,31 +37,36 @@ const rand = (n = 32) => b64url(crypto.getRandomValues(new Uint8Array(n)));
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const shortId = id => id.slice(-8);
 
-const CSS = `:root{--bg:#fbf8f1;--fg:#1d1b16;--muted:#5f5a4f;--line:#e2dccd;--card:#fff;--gold:#b8860b}
-@media (prefers-color-scheme:dark){:root{--bg:#15140f;--fg:#efeadc;--muted:#a59f8f;--line:#2e2b22;--card:#1e1c16;--gold:#e8b830}}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:760px;margin:0 auto;padding:32px 16px 64px}a{color:inherit}h1{line-height:1.15}
-table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid var(--line);padding:8px 4px;vertical-align:top;text-align:left;overflow-wrap:anywhere}
-.n{font-variant-numeric:tabular-nums;font-size:22px;font-weight:600}.note{font-size:14px;color:var(--muted)}
-input[type=url],input[type=text]{width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);font:inherit;font-size:14px}
-button,.btn{display:inline-block;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;cursor:pointer;text-decoration:none}
-.primary{background:var(--gold);border-color:var(--gold);color:#15140f;font-weight:600}
+// The look is /ui.css, shared with the static pages; this is layout for the pages made here.
+const CSS = `table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid var(--line);padding:10px 4px;vertical-align:top;text-align:left;overflow-wrap:anywhere}
+th{font-size:13px;font-weight:600;color:var(--muted)}
+.n{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700}th.num,td.num{width:6em;white-space:nowrap;text-align:right}
+td input[type=url]{margin-top:6px;font-size:14px;padding:6px 8px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 .tile{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .tile img{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;background:var(--line)}
 .tile span{display:block;padding:8px;font-size:14px;line-height:1.35}.tile small{color:var(--muted)}
-th.num,td.num{width:4.5em;white-space:nowrap}
-.small{padding:3px 8px;font-size:13px;margin-top:6px}.flash{background:var(--card);border-left:4px solid var(--gold);padding:8px 12px}
-.kept{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}.kept form{display:inline}
-.thumb{width:48px;aspect-ratio:9/16;object-fit:cover;border-radius:4px;background:var(--line)}`;
+.thumb{width:48px;aspect-ratio:9/16;object-fit:cover;border-radius:4px;background:var(--line)}
+.made{display:grid;grid-template-columns:54px 1fr auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.made:first-of-type{border-top:1px solid var(--line)}.made .note{display:block;line-height:1.45}
+.poster{width:54px;aspect-ratio:9/16;border-radius:6px;object-fit:cover;background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);font-size:14px}
+.kept h3{margin-bottom:2px}.kept .note{margin:0}
+details.sec>summary{font-size:20px;font-weight:700;margin:36px 0 8px;cursor:pointer}
+.empty{text-align:center;padding:28px 20px}.empty p{margin:0 auto 14px;max-width:46ch}`;
 
-function page(title, body, { status = 200, headers = {}, index = false } = {}) {
+const NAV = [["/make/", "Make shorts"], ["/me", "Your shorts"], ["/privacy", "Privacy", "opt"]];
+const header = at => `<header class="top"><div><a class="brand" href="/"><img src="/logo.png" alt="" width="28" height="28">Dailies</a>
+<nav>${NAV.map(([href, text, c]) => `<a href="${href}"${c ? ` class="${c}"` : ""}${href === at ? ' aria-current="page"' : ""}>${text}</a>`).join("")}</nav></div></header>`;
+const FOOT = `<footer class="foot">Dailies is built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>, for Buffer Commit. <a href="/privacy">Privacy</a> · <a href="https://github.com/walkertbrown/Cider-Prod">Public log</a></footer>`;
+
+// bare: the public bio page, which is the owner's and carries no Dailies header.
+function page(title, body, { status = 200, headers = {}, index = false, nav = "", bare = false } = {}) {
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">${index ? "" : '<meta name="robots" content="noindex">'}
-<title>${esc(title)}</title><link rel="icon" href="/logo.png">
+<title>${esc(title)}</title><link rel="icon" href="/logo.png"><link rel="stylesheet" href="/ui.css">
 <script src="https://pulse.bananafest-destiny.com/p.js" data-site="tap.bananafest-destiny.com" defer></script>
 <style>${CSS}</style></head>
-<body><main>${body}</main></body></html>`,
+<body>${bare ? "" : header(nav)}<main>${body}</main>${bare ? "" : FOOT}</body></html>`,
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...headers } });
 }
 
@@ -270,7 +277,7 @@ ${p.thumb ? `<img src="/t/${user.name}/${shortId(p.id)}" alt="" loading="lazy">`
 <h1>Which post brought you here?</h1>
 <p>Tap the one you saw. <a href="/go/${user.name}">Or skip straight to the site</a>.</p>
 <div class="grid">${tiles || '<p class="note">No posts yet.</p>'}</div>
-<p class="note" style="margin-top:32px">Made with <a href="/">Dailies</a>. Tapping counts one visit for that post: a number, with no cookie and no IP kept.</p>`);
+<p class="note" style="margin-top:32px">Made with <a href="/">Dailies</a>. Tapping counts one visit for that post: a number, with no cookie and no IP kept.</p>`, { bare: true });
 }
 
 async function mePage(env, ctx, req, { acct, user }) {
@@ -286,20 +293,18 @@ async function mePage(env, ctx, req, { acct, user }) {
 <td>${p.link ? `<a href="${esc(p.link)}">${esc(p.title)}</a>` : esc(p.title)}<br><span class="note">${esc(net(p.service))} · ${esc(day(p.sentAt))}</span>
 <input type="url" name="d_${esc(p.id)}" value="${esc(user.dest?.[p.id] || "")}" placeholder="${esc(p.found || user.mainDest || "Where should this post send people?")}" aria-label="Destination"></td>
 <td class="num"><span class="n">${n.p}</span><br><span class="note">${n.f ? `+${n.f} fetcher${n.f === 1 ? "" : "s"}` : ""}</span><br>
-${kept.has(p.id) ? '<span class="note">Kept</span>' : `<button class="small" formaction="/me/keep" name="post" value="${esc(p.id)}">Keep this</button>`}</td></tr>`;
+${kept.has(p.id) ? '<span class="badge gold">Kept</span>' : `<button class="sm" formaction="/me/keep" name="post" value="${esc(p.id)}">Keep this</button>`}</td></tr>`;
   }).join("");
   const skip = c.skip || { p: 0, f: 0 };
   const flash = user.flash;
   if (flash) { delete user.flash; ctx.waitUntil(putJSON(env, `user:${acct}`, user)); }
-  return page("Dailies", `
-<a href="/">Dailies</a>
-<h1>Your shorts</h1>
-<p><a class="primary" href="/make/" style="display:inline-block;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:600">Make shorts</a></p>
-${error ? `<p class="note" style="color:#c0392b">Couldn't refresh from Buffer: ${esc(error)} ${error.includes("Sign in") ? '<a href="/auth/start">Sign in</a>' : ""}</p>` : ""}
+  return page("Your shorts · Dailies", `
+<div class="pagehead"><h1>Your shorts</h1><a class="btn primary" href="/make/">Make shorts</a></div>
+${error ? `<p class="flash bad">Couldn't refresh from Buffer: ${esc(error)} ${error.includes("Sign in") ? '<a href="/auth/start">Sign in</a>' : ""}</p>` : ""}
 ${flash ? `<p class="flash">${esc(flash)}</p>` : ""}
 ${madeSection(user)}
 ${keptSection(user, c)}
-<details${total ? " open" : ""}><summary style="font-size:20px;font-weight:700;margin:32px 0 8px;cursor:pointer">Bio link and counts</summary>
+<details class="sec"${total ? " open" : ""}><summary>Bio link and counts</summary>
 <p>Your bio link: <a href="${bio}"><b>${bio}</b></a><br><span class="note">Put it in your Instagram, TikTok or YouTube bio. Visitors pick the post they saw, and Dailies counts it before sending them on.</span></p>
 <p><span class="n">${total}</span> ${total === 1 ? "person" : "people"} so far${total ? "" : ". Nothing is counted until someone taps your bio link"}. ${skip.p} of them skipped straight to the site.</p>
 <form method="post" action="/me">
@@ -307,14 +312,16 @@ ${keptSection(user, c)}
 <p><label>Main site (for the skip link, and posts with no address of their own)<br>
 <input type="url" name="main" value="${esc(user.mainDest || "")}" placeholder="https://"></label></p>
 <table><tr><th></th><th>Post, and where it sends people</th><th class="num">People</th></tr>${rows || '<tr><td></td><td class="note">No sent posts in Buffer yet.</td><td></td></tr>'}</table>
-<p><button class="primary">Save</button> <a class="btn" href="/me?refresh">Refresh from Buffer</a></p>
+<div class="actions"><button class="primary">Save</button><a class="btn" href="/me?refresh">Refresh from Buffer</a></div>
 </form>
 <p class="note">A person is counted when a browser opens the link as a page. Link previews, checkers and crawlers are counted apart as fetchers. Posts were read from Buffer ${user.postsAt ? new Date(user.postsAt).toUTCString().slice(5, 22) + " UTC" : "not yet"}. Buffer doesn't let outside apps read post views or clicks yet, so this page shows only what Dailies counts itself.</p>
 </details>
 <h2>Claude Code</h2>
 <p class="note">Let Claude Code make videos of what you build: it sends what shipped, Dailies writes the scripts, and you get a link here to render and draft them. Nothing posts without you.${user.mcpKey ? ` Your key was made ${esc(day(user.mcpKey.at))} and ends in ${esc(user.mcpKey.tail)}.` : ""}</p>
 <form method="post" action="/me/key"${user.mcpKey ? ` onsubmit="return confirm('Make a new key? The old one stops working.')"` : ""}><button>${user.mcpKey ? "Make a new Claude key" : "Make a Claude key"}</button></form>
-<form method="post" action="/me/disconnect" onsubmit="return confirm('Delete everything Dailies keeps for this account?')"><button>Disconnect and delete</button></form>`);
+<h2>Account</h2>
+<p class="note">Disconnecting deletes everything Dailies keeps for this account: the Buffer access, the videos and their records, the counts, the bio link and your Claude key. What's already in Buffer stays there.</p>
+<form method="post" action="/me/disconnect" onsubmit="return confirm('Delete everything Dailies keeps for this account?')"><button class="danger">Disconnect and delete</button></form>`, { nav: "/me" });
 }
 
 // ---- Keep this / Post it again ----------------------------------------------
@@ -341,18 +348,19 @@ const madeFor = (user, p) => (user.made || []).find(m => p.tagIds?.includes(m.ta
 // Made with Dailies: each drafted video, and the networks it has gone out on.
 function madeSection(user) {
   const made = (user.made || []).slice(0, 30);
-  if (!made.length) return `<h2>Made with Dailies</h2><p class="note">Nothing drafted yet. <a href="/make/">Make shorts</a>, draft them, and send them from Buffer. Each one shows up here once it's sent.</p>`;
+  if (!made.length) return `<h2>Made with Dailies</h2><div class="card empty"><p>Nothing drafted yet. Each video you draft shows up here, with the networks it went out on.</p><a class="btn primary" href="/make/">Make shorts</a></div>`;
   const kept = new Set((user.kept || []).map(k => k.tagId));
   const rows = made.map(m => {
     const sent = user.posts.filter(p => p.tagIds?.includes(m.tagId)).sort((a, b) => a.sentAt < b.sentAt ? -1 : 1);
     const where = sent.length ? `Sent on ${sent.map(p => `${net(p.service)} ${day(p.sentAt)}`).join(", ")}` : "Drafted, not sent yet";
-    const act = kept.has(m.tagId) ? '<span class="note">Kept</span>'
-      : sent.length ? `<form method="post" action="/me/keep"><button class="small" name="post" value="${esc(sent[0].id)}">Keep this</button></form>` : "";
-    return `<tr><td><b>${esc(m.title || m.angle)}</b><br><span class="note">${esc(m.hook)}</span><br><span class="note">${esc(where)}</span></td><td class="num">${act}</td></tr>`;
+    const act = kept.has(m.tagId) ? '<span class="badge gold">Kept</span>'
+      : sent.length ? `<form method="post" action="/me/keep"><button class="sm" name="post" value="${esc(sent[0].id)}">Keep this</button></form>` : "";
+    const poster = m.poster ? `<img class="poster" src="/me/poster/${esc(m.tagId)}" alt="" loading="lazy">` : '<span class="poster" aria-hidden="true">▶</span>';
+    return `<div class="made">${poster}<div><b>${esc(m.title || m.angle)}</b>${m.hook ? `<span class="note">${esc(m.hook)}</span>` : ""}<span class="note">${esc(where)}</span></div><div>${act}</div></div>`;
   }).join("");
   return `<h2>Made with Dailies</h2>
 <p class="note">Buffer doesn't let apps read views yet, but you can see them in Buffer's analytics. When one did well, press Keep this: Dailies saves it as a template and can make more like it.</p>
-<table>${rows}</table>`;
+${rows}`;
 }
 
 function keptSection(user, c) {
@@ -360,10 +368,11 @@ function keptSection(user, c) {
   if (!list.length) return `<h2>Kept</h2><p class="note">Press "Keep this" on a post that worked. Dailies saves it as a template in your Buffer, can draft it again for your other networks, and makes more like it.</p>`;
   return `<h2>Kept</h2>` + list.map(({ k, posts, people, best }) => {
     const left = untried(user, k, posts);
-    return `<div class="kept"><b>${esc(k.title)}</b><br>
-<span class="note">${posts.length} post${posts.length === 1 ? "" : "s"}${k.ownTag === false ? "" : ` · <b>${people}</b> ${people === 1 ? "person" : "people"}${best ? ` · best on ${esc(net(best))}` : ""}`} · template and tag "${esc(k.tagName)}" in Buffer${k.drafts?.length ? ` · drafted for ${esc(k.drafts.map(d => net(d.service)).join(", "))}` : ""}</span><br>
-${k.like?.link ? `<a class="btn small" href="/make/?like=${encodeURIComponent(k.post)}">Make more like this</a> ` : ""}${left.length ? `<form method="post" action="/me/again"><button class="small primary" name="kept" value="${esc(k.post)}">Post it again: draft for ${esc(left.map(ch => net(ch.service)).join(", "))}</button></form> ` : ""}
-<form method="post" action="/me/forget" onsubmit="return confirm('Forget this, and delete what Dailies made for it in Buffer?')"><button class="small" name="kept" value="${esc(k.post)}">Forget</button></form></div>`;
+    return `<div class="kept card"><h3>${esc(k.title)}</h3>
+<p class="note">${posts.length} post${posts.length === 1 ? "" : "s"}${k.ownTag === false ? "" : ` · <b>${people}</b> ${people === 1 ? "person" : "people"}${best ? ` · best on ${esc(net(best))}` : ""}`} · template and tag "${esc(k.tagName)}" in Buffer${k.drafts?.length ? ` · drafted for ${esc(k.drafts.map(d => net(d.service)).join(", "))}` : ""}</p>
+<div class="actions">${left.length ? `<form method="post" action="/me/again"><button class="sm primary" name="kept" value="${esc(k.post)}">Post it again: draft for ${esc(left.map(ch => net(ch.service)).join(", "))}</button></form>` : ""}
+${k.like?.link ? `<a class="btn sm" href="/make/?like=${encodeURIComponent(k.post)}">Make more like this</a>` : ""}
+<form method="post" action="/me/forget" onsubmit="return confirm('Forget this, and delete what Dailies made for it in Buffer?')"><button class="sm ghost" name="kept" value="${esc(k.post)}">Forget</button></form></div></div>`;
   }).join("");
 }
 
@@ -482,25 +491,27 @@ async function makeKey(req, env, { acct, user }) {
   await env.TAP.put(`key:${user.mcpKey.hash}`, acct);
   await putJSON(env, `user:${acct}`, user);
   const cmd = `claude mcp add --transport http dailies ${HOME}/mcp --header "Authorization: Bearer ${key}"`;
-  return page("Your Claude key", `<a href="/me">Dailies</a><h1>Your Claude key</h1>
+  return page("Your Claude key · Dailies", `<h1>Your Claude key</h1>
 <p>Copy it now: Dailies keeps only a fingerprint of it and can't show it again.</p>
-<p><code style="word-break:break-all">${esc(key)}</code></p>
+<pre class="code"><code>${esc(key)}</code></pre>
 <p>In your project's folder, run this once:</p>
-<pre style="white-space:pre-wrap;word-break:break-all"><code>${esc(cmd)}</code></pre>
+<pre class="code"><code>${esc(cmd)}</code></pre>
 <p class="note">Then ask Claude Code, after you ship something, to "make a build video with Dailies". It sends what changed (and screenshots or the live link if you like), and gets back a review link to this account. Anyone with the key can make scripts and text drafts here, never posts. Lost it? Make a new one; the old one stops working.</p>
-<p><a href="/me">Back</a></p>`, { headers: { "cache-control": "no-store" } });
+<div class="actions"><a class="btn" href="/me">Back to your shorts</a></div>`, { nav: "/me", headers: { "cache-control": "no-store" } });
 }
 
 async function disconnect(env, { acct, user }) {
   const keys = [`tok:${acct}`, `user:${acct}`, `name:${user.name}`, ...(user.sessions || []).map(s => `ses:${s}`), ...(user.videos || []).map(v => `v:${v.id}`), ...(user.mcpKey ? [`key:${user.mcpKey.hash}`] : [])];
-  let cursor;
-  do {
-    const l = await env.TAP.list({ prefix: `n:${acct}:`, cursor });
-    keys.push(...l.keys.map(k => k.name));
-    cursor = l.list_complete ? null : l.cursor;
-  } while (cursor);
+  for (const prefix of [`n:${acct}:`, `pf:${acct}:`]) {
+    let cursor;
+    do {
+      const l = await env.TAP.list({ prefix, cursor });
+      keys.push(...l.keys.map(k => k.name));
+      cursor = l.list_complete ? null : l.cursor;
+    } while (cursor);
+  }
   await Promise.all(keys.map(k => env.TAP.delete(k)));
-  return page("Disconnected", `<a href="/">Dailies</a><h1>Disconnected</h1><p>Everything Dailies kept for this account is deleted: the Buffer access, the copy of your posts, the counts, the bio link, the videos you made and your Claude key. To remove Dailies from Buffer's side too, open your Buffer settings, then Apps.</p>`,
+  return page("Disconnected", `<h1>Disconnected</h1><p>Everything Dailies kept for this account is deleted: the Buffer access, the copy of your posts, the counts, the bio link, the videos you made and your Claude key. To remove Dailies from Buffer's side too, open your Buffer settings, then Apps.</p>`,
     { headers: { "set-cookie": "tap_sid=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax" } });
 }
 
@@ -532,7 +543,12 @@ export default {
     if ((m = path.match(/^\/u\/([a-z0-9]+)$/))) {
       const acct = await env.TAP.get(`name:${m[1]}`);
       const user = acct && await getJSON(env, `user:${acct}`);
-      return user ? bioPage(user) : page("Not found", "<h1>No page here</h1>", { status: 404 });
+      return user ? bioPage(user) : page("Not found", "<h1>No page here</h1>", { status: 404, bare: true });
+    }
+    if ((m = path.match(/^\/me\/poster\/([A-Za-z0-9]+)$/))) {
+      const o = await owner(req, env);
+      const jpeg = o && await env.TAP.get(`pf:${o.acct}:${m[1]}`, "arrayBuffer");
+      return jpeg ? new Response(jpeg, { headers: { "content-type": "image/jpeg", "cache-control": "private, max-age=86400" } }) : new Response("Not found", { status: 404 });
     }
     const ME = { "/me": save, "/me/keep": keep, "/me/again": again, "/me/forget": forget, "/me/key": makeKey, "/me/disconnect": (req, env, o) => disconnect(env, o) };
     if (ME[path]) {

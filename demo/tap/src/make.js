@@ -7,7 +7,7 @@
 //   PUT  /api/upload   an MP4 from the browser → {id, url}
 //   GET  /api/channels the account's Buffer channels
 //   GET  /api/job?id=  a video job made from Claude Code (src/mcp.js), for review here
-//   POST /api/draft    {video, channels, caption, title} → one Buffer draft per channel
+//   POST /api/draft    {video, channels, caption, title, …, poster} → one Buffer draft per channel
 //   POST /api/plan     {page, start, weeks, perWeek} → dated items for the connected networks (capped)
 //   POST /api/ideas    {items} → one Buffer Idea per item (Buffer has no API to delete ideas)
 //   POST /api/transcribe  a 16 kHz mono WAV piece of a long video's sound → timed words (speech-to-text, capped by minutes)
@@ -457,7 +457,7 @@ export async function api(req, env, path, { acct, user }, d) {
     return json({ results });
   }
   if (path === "/api/draft" && req.method === "POST") {
-    const { video, channels, caption, title, hashtags, angle, hook, lines, link } = await req.json().catch(() => ({}));
+    const { video, channels, caption, title, hashtags, angle, hook, lines, link, poster } = await req.json().catch(() => ({}));
     const kept = (user.videos || []).find(v => v.id === video);
     if (!kept) return json({ error: "Upload the video first." }, 400);
     const chosen = (user.channels || []).filter(c => (channels || []).includes(c.id));
@@ -482,7 +482,15 @@ export async function api(req, env, path, { acct, user }, d) {
       const rec = (user.made || []).find(m => m.tagId === kept.tagId) || { tagId: kept.tagId, at: new Date().toISOString() };
       Object.assign(rec, { angle: str(angle, 80), title: str(title, 100), caption: str(caption, 500), hook: str(hook, 140),
         lines: [].concat(lines || []).slice(0, 8).map(l => str(l, 120)), link: safeHttp(link || "")?.href || "" });
-      user.made = [rec, ...(user.made || []).filter(m => m !== rec)].slice(0, 100);
+      // A small still for its row on /me: a JPEG data URL from the browser, up to 80 KB.
+      const jpeg = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]{100,110000})$/.exec(String(poster || ""))?.[1];
+      if (jpeg) {
+        const bytes = Uint8Array.from(atob(jpeg), c => c.charCodeAt(0));
+        if (bytes[0] === 0xff && bytes[1] === 0xd8) { await env.TAP.put(`pf:${acct}:${rec.tagId}`, bytes); rec.poster = true; }
+      }
+      const all = [rec, ...(user.made || []).filter(m => m !== rec)];
+      await Promise.all(all.slice(100).filter(m => m.poster).map(m => env.TAP.delete(`pf:${acct}:${m.tagId}`)));
+      user.made = all.slice(0, 100);
       await d.putJSON(env, `user:${acct}`, user);
     }
     return json({ results });

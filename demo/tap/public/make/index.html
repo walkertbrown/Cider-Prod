@@ -1,70 +1,82 @@
 <!doctype html>
 <html lang="en">
 <head>
-<title>Dailies: make shorts from a link</title>
+<title>Make shorts · Dailies</title>
 <meta name="description" content="Paste a link. Dailies writes short videos from the page, renders them in your browser and drafts them into Buffer.">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/logo.png">
+<link rel="stylesheet" href="/ui.css">
 <script src="https://pulse.bananafest-destiny.com/p.js" data-site="tap.bananafest-destiny.com" defer></script>
 <style>
-:root{--bg:#fbf8f1;--fg:#1d1b16;--muted:#5f5a4f;--line:#e2dccd;--card:#fff;--gold:#e8b830;--bad:#b3261e}
-@media (prefers-color-scheme:dark){:root{--bg:#15140f;--fg:#efeadc;--muted:#a59f8f;--line:#2e2b22;--card:#1d1b15;--bad:#f2b8b5}}
-*{box-sizing:border-box}[hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:880px;margin:0 auto;padding:28px 16px 72px}
-h1{font-size:28px;line-height:1.15;margin:8px 0 12px}h2{font-size:19px;margin:28px 0 8px}
-a{color:inherit}.muted{color:var(--muted)}.small{font-size:14px}.bad{color:var(--bad)}
-input[type=url],input[type=text],textarea,select{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
-textarea{resize:vertical;min-height:2.6em;field-sizing:content}
-.starts{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.starts>.card{margin:14px 0 0}
-@media (max-width:640px){.starts{grid-template-columns:1fr;gap:0}}
-.pair{display:inline-flex;gap:6px;align-items:center}.status:empty{min-height:0}
-button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:inherit;border-radius:8px;padding:8px 16px;cursor:pointer}
-button.primary{background:var(--gold);border-color:var(--gold);color:#15140f}
-button:disabled{opacity:.5;cursor:default}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>input{flex:1;min-width:220px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
-.strip{display:flex;gap:6px;overflow-x:auto;padding:4px 0}.strip img{height:72px;border-radius:6px;flex:none}
-.video{display:grid;grid-template-columns:1fr 240px;gap:16px}
-@media (max-width:640px){.video{grid-template-columns:1fr}}
-.scene{display:grid;grid-template-columns:56px 1fr 96px;gap:8px;align-items:start;margin:6px 0}
-.scene img,.scene .noimg{width:56px;height:56px;object-fit:cover;border-radius:6px;background:var(--line)}
-.scene select{padding:6px 4px}
-video,canvas.preview{width:100%;max-width:240px;aspect-ratio:9/16;background:#000;border-radius:10px;display:block}
-label.ch{display:inline-flex;gap:6px;align-items:center;margin:4px 12px 4px 0}
-.status{min-height:1.4em}
-table.plan{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}
-table.plan td{border-top:1px solid var(--line);padding:8px 6px;vertical-align:top}
-table.plan .d{white-space:nowrap;color:var(--muted)}table.plan button{padding:4px 10px;font-size:14px}
-.prods{max-height:360px;overflow-y:auto;border-top:1px solid var(--line)}
-label.prod{display:grid;grid-template-columns:22px 48px 1fr;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer}
+/* Layout only; the look is /ui.css. */
+.starts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0 0}
+.starts>.card{margin:0;display:flex;flex-direction:column}
+.starts h2{margin:0 0 4px;font-size:18px}
+.starts .actions{margin-top:auto;padding-top:14px}
+@media (max-width:640px){.starts{grid-template-columns:1fr}}
+.pair{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+.status{margin:8px 0 0}.status:empty,#clipInfo:empty{display:none}
+.drop{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0 0;padding:14px;border:1.5px dashed var(--line);border-radius:10px;cursor:pointer}
+.drop:hover,.drop.over,.drop:focus-within{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 7%,transparent)}
+.drop .btn{pointer-events:none}.drop,label.btn{position:relative}
+label.btn:has(input:focus-visible){outline:2px solid var(--gold);outline-offset:2px}
+.strip{display:flex;gap:6px;overflow-x:auto;padding:4px 0;margin-top:10px}.strip img{height:72px;border-radius:6px;flex:none}
+#pPages:empty{display:none}#pPages{margin:6px 0 0;padding-left:20px}
+.vhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.vhead h3{flex:1;min-width:12em}
+.video{display:grid;grid-template-columns:1fr 240px;gap:28px;align-items:start}
+.side{margin-top:12px}
+@media (max-width:640px){.video{grid-template-columns:1fr;gap:0}.side{width:100%;max-width:240px;margin:20px auto 0}}
+.grp{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+.grp:first-child{margin-top:14px}
+.scene{display:grid;grid-template-columns:56px 1fr 8.5em;gap:8px;align-items:start;margin:10px 0 0}
+.scene img,.scene .noimg{width:56px;height:56px;object-fit:cover;border-radius:6px;background:var(--soft)}
+.scene select{width:100%}
+@media (max-width:420px){.scene{grid-template-columns:48px 1fr}.scene img,.scene .noimg{width:48px;height:48px}.scene select{grid-column:2;width:auto}}
+video,canvas.preview{width:100%;max-width:240px;aspect-ratio:9/16;background:#000;border-radius:12px;display:block}
+input[type=range]{accent-color:var(--gold);vertical-align:middle}
+.quote{margin:12px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.quote.open{display:block}
+.times{display:flex;gap:16px;flex-wrap:wrap}.times input{width:7.5em}
+.plan{margin-top:12px}
+.plan .it{display:grid;grid-template-columns:20px 6.5em 1fr auto;grid-template-areas:"ck d body act";gap:6px 14px;align-items:start;padding:14px 0;border-top:1px solid var(--line)}
+.plan .ck{grid-area:ck;margin-top:3px}.plan .d{grid-area:d;font-size:14px;color:var(--muted);white-space:nowrap;padding-top:1px}
+.plan .body{grid-area:body;min-width:0}.plan .act{grid-area:act}
+.plan .nets{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px;font-size:13px;color:var(--muted)}
+@media (max-width:640px){.plan .it{grid-template-columns:20px 1fr;grid-template-areas:"ck d" ". body" ". act"}.plan .act{justify-self:start}}
+.prods{max-height:360px;overflow-y:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px}
+label.prod{display:grid;grid-template-columns:20px 48px 1fr;gap:12px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+label.prod:last-child{border-bottom:0}
 label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
 </style>
 </head>
-<body><main>
-<a href="/me">← Your shorts</a>
+<body>
+<header class="top"><div><a class="brand" href="/"><img src="/logo.png" alt="" width="28" height="28">Dailies</a>
+<nav><a href="/make/" aria-current="page">Make shorts</a><a href="/me">Your shorts</a><a href="/privacy" class="opt">Privacy</a></nav></div></header>
+<main>
 <h1>Make shorts</h1>
-<p class="muted">Start from a link or a store, or from a long video. Dailies writes or finds the moments, renders vertical videos here in your browser, and puts them into Buffer as drafts. Nothing is posted until you post it.</p>
+<p class="lede prose">Start from a link or a store, or from a long video. Dailies writes or finds the moments, renders vertical videos here in your browser, and puts them into Buffer as drafts. Nothing is posted until you post it.</p>
 
-<p class="card small" id="likeNote" hidden></p>
-<div class="starts">
+<p class="flash" id="likeNote" hidden></p>
+<div class="starts" id="starts">
 <form id="readForm" class="card">
-  <strong>From a link or a store</strong>
-  <p class="small muted" style="margin:4px 0 8px">A product, an app, an article, a listing, or a Shopify store.</p>
-  <textarea id="url" rows="3" placeholder="https://your-site.com&#10;https://your-site.com/a-feature" required></textarea>
-  <p class="small muted" style="margin:4px 0 8px">One link per line, up to 5. Put the main page first: the videos send people there. Feature pages give them more to talk about.</p>
-  <button class="primary" id="readBtn">Read the pages</button>
+  <h2>From a link or a store</h2>
+  <p class="note">A product, an app, an article, a listing, or a Shopify store.</p>
+  <label class="f">Links, one per line (up to 5)
+    <textarea id="url" rows="3" placeholder="https://your-site.com&#10;https://your-site.com/a-feature" required></textarea></label>
+  <p class="note">Put the main page first: the videos send people there. Feature pages give them more to talk about.</p>
+  <div class="actions"><button class="primary" id="readBtn">Read the pages</button></div>
 </form>
 <div class="card" id="clipBox">
-  <strong>From a long video</strong>
-  <p class="small muted" style="margin:4px 0 8px">A talk, a stream, a podcast or a demo (MP4 or MOV, up to 60 minutes). Dailies finds the moments that stand on their own and cuts them into captioned vertical clips. The video stays on your device; only its sound is sent, to be turned into text.</p>
-  <div class="row"><input type="file" id="clipFile" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v" style="flex:1;min-width:220px"></div>
-  <p class="small muted" id="clipInfo" style="margin:4px 0"></p>
-  <div class="row">
-    <label for="clipCount">How many clips</label>
-    <select id="clipCount" style="width:auto"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
+  <h2>From a long video</h2>
+  <p class="note">A talk, a stream, a podcast or a demo (MP4 or MOV, up to 60 minutes). Dailies finds the moments that stand on their own and cuts them into captioned vertical clips. The video stays on your device; only its sound is sent, to be turned into text.</p>
+  <label class="drop" id="clipDrop"><input type="file" id="clipFile" class="vh" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v">
+    <span class="btn sm">Choose a video</span><span class="small muted" id="clipName">or drop it here</span></label>
+  <p class="note" id="clipInfo"></p>
+  <div class="actions">
+    <label class="pair" for="clipCount">How many clips</label>
+    <select id="clipCount"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
     <button class="primary" id="clipBtn" disabled>Find the clips</button>
   </div>
   <p class="status small" id="clipStatus"></p>
@@ -74,60 +86,63 @@ label.prod img{width:48px;height:48px;object-fit:cover;border-radius:6px}
 
 <section id="pageBox" hidden>
   <div class="card">
-    <strong id="pTitle"></strong>
-    <div class="small muted" id="pHost"></div>
-    <ul class="small muted" id="pPages" style="margin:4px 0"></ul>
+    <h2 id="pTitle"></h2>
+    <div class="note" id="pHost"></div>
+    <ul class="note" id="pPages"></ul>
     <div class="strip" id="pImgs"></div>
-    <div class="row" style="margin-top:10px">
-      <label for="count">How many videos</label>
-      <select id="count" style="width:auto"></select>
+    <div class="actions">
+      <label class="pair" for="count">How many videos</label>
+      <select id="count"></select>
       <button class="primary" id="writeBtn">Write the scripts</button>
     </div>
-    <p class="small muted" id="pWhy"></p>
+    <p class="note" id="pWhy"></p>
   </div>
   <p class="status small" id="writeStatus"></p>
 </section>
 
 <section id="storeBox" hidden>
   <div class="card">
-    <strong id="sTitle"></strong>
-    <p class="small muted" id="sNote" style="margin:4px 0 8px"></p>
+    <h2 id="sTitle"></h2>
+    <p class="note" id="sNote"></p>
     <div id="sList" class="prods"></div>
-    <div class="row" style="margin-top:10px"><button class="primary" id="storeBtn">Write one per product</button></div>
+    <div class="actions"><button class="primary" id="storeBtn">Write one per product</button></div>
   </div>
   <p class="status small" id="storeStatus"></p>
 </section>
 
+<section id="videos"></section>
+<div class="card" id="allBox" hidden>
+  <h2>All videos</h2>
+  <p class="note" id="allMade"></p>
+  <div class="actions"><button class="primary" id="renderAll">Render all</button></div>
+  <div id="allDraft" hidden>
+    <label class="f">Draft every rendered video to</label>
+    <div id="allTicks"></div>
+    <div class="actions"><button class="primary" id="draftAll" disabled>Draft all to Buffer</button></div>
+  </div>
+  <div class="status small" id="allOut"></div>
+</div>
+
 <section id="planBox" hidden>
   <div class="card">
-    <strong>Plan a month</strong>
-    <p class="small muted" style="margin:4px 0 8px">Dailies lays out dated posts from this page for the networks you've connected in Buffer: videos for Instagram, TikTok and YouTube, text for the others. Write any video from it below, or save the plan into Buffer as Ideas.</p>
-    <div class="row">
-      <span class="pair"><label for="perWeek">Posts a week</label><select id="perWeek" style="width:auto"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>7</option></select></span>
-      <span class="pair"><label for="weeks">Weeks</label><select id="weeks" style="width:auto"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></span>
-      <span class="pair"><label for="start">From</label><input type="date" id="start" style="width:auto"></span>
+    <h2>Plan a month</h2>
+    <p class="note prose">Dailies lays out dated posts from this page for the networks you've connected in Buffer: videos for Instagram, TikTok and YouTube, text for the others. Write any video from it, or save the plan into Buffer as Ideas.</p>
+    <div class="actions">
+      <span class="pair"><label for="perWeek">Posts a week</label><select id="perWeek"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>7</option></select></span>
+      <span class="pair"><label for="weeks">Weeks</label><select id="weeks"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></span>
+      <span class="pair"><label for="start">From</label><input type="date" id="start"></span>
       <button class="primary" id="planBtn">Lay out the plan</button>
     </div>
     <p class="status small" id="planStatus"></p>
     <div id="planList"></div>
-    <div class="row" id="planActs" hidden><button class="primary" id="ideasBtn">Save ticked items as Buffer Ideas</button></div>
+    <div class="actions" id="planActs" hidden><button class="primary" id="ideasBtn">Save ticked items as Buffer Ideas</button></div>
     <div class="status small" id="ideasOut"></div>
   </div>
 </section>
 
-<section id="videos"></section>
-<div class="card" id="allBox" hidden>
-  <strong>All videos</strong>
-  <p class="small muted" id="allMade" style="margin:4px 0"></p>
-  <div class="row"><button class="primary" id="renderAll">Render all</button></div>
-  <p class="small" style="margin:10px 0 4px">Draft every rendered video to:</p>
-  <div id="allTicks"></div>
-  <div class="row"><button class="primary" id="draftAll" disabled>Draft all to Buffer</button></div>
-  <div class="status small" id="allOut"></div>
-</div>
-
-<p class="small muted" style="margin-top:40px">Videos are encoded in your browser (Chrome, Edge or recent Safari). A video you upload is kept at Dailies for 30 days so Buffer can fetch it, then deleted. <a href="/privacy">Privacy</a>.</p>
+<p class="note" style="margin-top:32px">Videos are encoded in your browser (Chrome, Edge or recent Safari). A video you upload is kept at Dailies for 30 days so Buffer can fetch it, then deleted.</p>
 </main>
+<footer class="foot">Dailies is built by vibecider4, an AI worker at <a href="https://bananafest-destiny.com">Bananafest Destiny</a>, for Buffer Commit. <a href="/privacy">Privacy</a> · <a href="https://github.com/walkertbrown/Cider-Prod">Public log</a></footer>
 <script type="module" src="/make/app.js"></script>
 <script type="module" src="/make/clips.js"></script>
 </body></html>
