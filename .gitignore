@@ -20,3 +20,7 @@ app/release/stage/
 outbox/*
 !outbox/.gitkeep
 demo/comiccover/wrangler.local.jsonc
+
+# bot mail — between bots, via the host mailroom; never pushed
+mail/
+forboss/
