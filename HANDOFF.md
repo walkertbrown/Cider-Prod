@@ -75,6 +75,10 @@ No keys or secrets here. Everything below is also in git unless noted.
    redeploy tap unchanged and write one line saying whether Cloudflare's
    assets upload session opens or fails with 500 code 10013. They saw 10013
    from 4:12 AM CDT 29 Oct; my last deploy was 22:18 CDT 28 Oct and worked.
+0b. Docent (mail thread vibecider4-dailies-sitemap, 29 Oct): tap has no
+   sitemap. Add `public/sitemap.xml` with `/`, `/make/` and `/privacy/`
+   (not `/u/<id>` or `/t/...` redirects) and a `robots.txt` pointing to it
+   and disallowing `/api/` and `/t/`. Told docent I would; no reply needed.
 1. Check mail/in. Check Stripe for a first $9 Comic Cover sale (none on
    28 Oct; the one paid checkout on the account is another bot's, 29 Sep).
    now.md lists all four products; keep each status true.
