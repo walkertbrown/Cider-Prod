@@ -3,10 +3,11 @@
 // word-timed captions (WebCodecs decode → canvas → encode → MP4). The video itself never leaves the device.
 import { createFile, DataStream } from "https://cdn.jsdelivr.net/npm/mp4box@0.5.3/+esm";
 import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs";
-import { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, W, H, FPS } from "./app.js";
+import { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, captionPick, hotWord, wrap, W, H, FPS } from "./app.js";
+import { getSegmenter, tick } from "./seg.js";
 
-const PIECE = 600, RATE = 16000, MAX_MINUTES = 60, WINDOW = 16 * 1048576;
-let src = null, words = [], segments = [];
+const PIECE = 600, RATE = 16000, MAX_MINUTES = 60, WINDOW = 16 * 1048576, LOUD = 50; // loudness readings a second
+let src = null, words = [], segments = [], env = null;
 
 // ---- Reading the file ---------------------------------------------------------
 
@@ -136,12 +137,14 @@ function wav(samples) {
   return out.buffer;
 }
 
-// The soundtrack up to `to`, downmixed and box-filtered to 16 kHz mono, sent in 10-minute pieces.
+// The soundtrack up to `to`, downmixed and box-filtered to 16 kHz mono, sent in 10-minute pieces. Its loudness is kept
+// too, 50 times a second in dB, for finding the pauses.
 async function listen(s, progress, to = s.duration) {
   const a = s.audio;
   if (!a) throw new Error("This video has no sound, so there's nothing to pick moments from.");
   const ratio = a.info.audio.sample_rate / RATE, piece = new Float32Array(PIECE * RATE), ready = [], all = { words: [], segments: [] };
-  let n = 0, sent = 0, sum = 0, cnt = 0, inPos = 0, next = ratio, t0 = null;
+  let n = 0, sent = 0, sum = 0, cnt = 0, inPos = 0, next = ratio, t0 = null, sq = 0, sqn = 0;
+  const loud = [], per = RATE / LOUD;
   const pieces = Math.ceil(to / PIECE);
   const send = async (samples, at) => {
     progress(`Listening… part ${++sent} of ${pieces}`);
@@ -160,15 +163,72 @@ async function listen(s, progress, to = s.duration) {
       let x = 0; for (let c = 0; c < ch; c++) x += planes[c][i];
       sum += x / ch; cnt++;
       if (++inPos >= next) {
-        piece[n++] = sum / cnt; sum = cnt = 0; next += ratio;
+        const y = sum / cnt; piece[n++] = y; sum = cnt = 0; next += ratio;
+        sq += y * y; if (++sqn === per) { loud.push(10 * Math.log10(sq / per + 1e-10)); sq = sqn = 0; }
         if (n === piece.length) { ready.push(piece.slice()); n = 0; }
       }
     }
   }, async () => { while (ready.length) await send(ready.shift(), t0 + (sent) * PIECE); });
   while (ready.length) await send(ready.shift(), t0 + sent * PIECE);
   if (n > RATE / 2) await send(piece.slice(0, n), t0 + sent * PIECE);
-  return all;
+  return { ...all, env: { rate: LOUD, t0: t0 || 0, db: Float32Array.from(loud) } };
 }
+
+// ---- Cutting the dead air -------------------------------------------------------------
+
+// The stretches of [from, to] to keep: a pause (quiet for over half a second, by the take's own loudness) is cut down
+// to a fifth of a second, and quiet before the first word and after the last goes. Quiet is measured against this
+// take: 30% of the way from its room noise up to its speaking level. No cut goes through the middle of a word the
+// speech-to-text heard. With no loudness to go on, it's all kept.
+function pauses(loudness, ws, from, to) {
+  const whole = Object.assign([{ a: from, b: to }], { cut: 0, saved: 0 });
+  const R = loudness?.rate, db0 = loudness?.db;
+  if (!db0?.length) return whole;
+  const i0 = Math.max(0, Math.floor((from - loudness.t0) * R)), i1 = Math.min(db0.length, Math.ceil((to - loudness.t0) * R));
+  if (i1 - i0 < R) return whole;
+  const db = db0.subarray(i0, i1), sorted = Float32Array.from(db).sort(), heard = sorted.filter(x => x > -90); // a muted stretch says nothing of the room
+  if (heard.length < R) return whole;
+  const at = (arr, p) => arr[Math.min(arr.length - 1, Math.floor(p * arr.length))], floor = at(heard, 0.05), voice = at(sorted, 0.9);
+  if (voice - floor < 10) return whole; // too even to tell talk from pause
+  const quiet = Math.min(floor + (voice - floor) * 0.3, voice - 12), T = i => loudness.t0 + (i0 + i) / R;
+  // Runs of quiet, carried over blips of up to 40 ms (a click, a breath out).
+  let runs = [], a = -1, last = -1;
+  for (let i = 0; i < db.length; i++) if (db[i] < quiet) { if (a < 0 || i - last > 3) { if (a >= 0) runs.push([T(a), T(last + 1)]); a = i; } last = i; }
+  if (a >= 0) runs.push([T(a), T(last + 1)]);
+  // The middle of each word that was heard is never cut (a word over 0.8 s long was stretched over a pause by the speech-to-text).
+  for (const w of ws) {
+    const d = w.e - w.s; if (d <= 0 || d > 0.8 || w.e < from || w.s > to) continue;
+    const ca = w.s + d * 0.3, cb = w.e - d * 0.3;
+    runs = runs.flatMap(([ra, rb]) => cb <= ra || ca >= rb ? [[ra, rb]] : [[ra, ca], [cb, rb]].filter(([x, y]) => y > x));
+  }
+  const cuts = [];
+  for (const [ra, rb] of runs) {
+    const head = ra <= from + 0.05, tail = rb >= to - 0.05;
+    if (head && tail) continue;
+    if (head) { if (rb - from > 0.4) cuts.push([from, rb - 0.15]); }
+    else if (tail) { if (to - ra > 0.4) cuts.push([ra + 0.25, to]); }
+    else if (rb - ra >= 0.5) cuts.push([ra + 0.12, rb - 0.08]);
+  }
+  const keeps = []; let k = from;
+  for (const [ca, cb] of cuts) { if (ca - k > 0.04) keeps.push({ a: k, b: ca }); k = Math.max(k, cb); }
+  if (to - k > 0.04) keeps.push({ a: k, b: to });
+  const kept = keeps.reduce((n, x) => n + x.b - x.a, 0);
+  if (kept < 1) return whole;
+  return Object.assign(keeps, { cut: cuts.filter(([ca, cb]) => ca > from && cb < to).length, saved: to - from - kept });
+}
+
+// The clock of a video with stretches cut out: output time (from 0) to source time and back, and which kept stretch it's in.
+function timeMap(keeps) {
+  let at = 0;
+  const ks = keeps.map(k => { const o = { a: k.a, b: k.b, o: at }; at += k.b - k.a; return o; });
+  return {
+    dur: at, keeps: ks,
+    toSrc: t => { const k = ks.findLast(k => k.o <= t) || ks[0]; return Math.min(k.b, k.a + t - k.o); },
+    toOut: x => { const k = ks.find(k => x < k.b); return k ? k.o + Math.max(0, x - k.a) : at; },
+    seg: t => Math.max(0, ks.findLastIndex(k => k.o <= t)),
+  };
+}
+const mapFor = (clip, ws = words, loudness = env) => timeMap(clip.tight === false ? [{ a: clip.start, b: clip.end }] : pauses(loudness, ws, clip.start, clip.end));
 
 // ---- Drawing a frame ------------------------------------------------------------
 
@@ -182,20 +242,23 @@ function put(ctx, f, x, y, w, h, r = src.rot) {
   ctx.restore();
 }
 
-function drawFrame(ctx, f, clip, t) {
+// `look` is where the picture is aimed: x is the point across the source (0 to 1) kept in the middle of a Fill frame,
+// z the zoom, which steps in and out at each cut pause so a jump cut reads as an edit.
+function drawFrame(ctx, f, clip, t, look = { x: 0.5, z: 1 }) {
   const [sw, sh] = src.rot % 180 ? [f.displayHeight, f.displayWidth] : [f.displayWidth, f.displayHeight];
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
-  if (clip.layout === "fill") {
-    const s = Math.max(W / sw, H / sh);
-    put(ctx, f, (W - sw * s) / 2, (H - sh * s) / 2, sw * s, sh * s);
+  if (clip.layout === "fill" || clip.layout === "middle") {
+    const s = Math.max(W / sw, H / sh) * look.z, dw = sw * s, dh = sh * s;
+    put(ctx, f, Math.min(0, Math.max(W - dw, W / 2 - look.x * dw)), (H - dh) * 0.4, dw, dh);
   } else {
     // A blurred copy behind (drawn tiny, then scaled up), the whole frame on top, the title above.
     const b = small.getContext("2d"), bs = Math.max(small.width / sw, small.height / sh);
     put(b, f, (small.width - sw * bs) / 2, (small.height - sh * bs) / 2, sw * bs, sh * bs);
     ctx.imageSmoothingQuality = "high"; ctx.drawImage(small, 0, 0, W, H);
     ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillRect(0, 0, W, H);
-    const s = Math.min(W / sw, (H * 0.62) / sh), w = sw * s, h = sh * s;
-    put(ctx, f, (W - w) / 2, H * 0.45 - h / 2, w, h);
+    const s = Math.min(W / sw, (H * 0.62) / sh), w = sw * s, h = sh * s, x = (W - w) / 2, y = H * 0.45 - h / 2, z = look.z;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    put(ctx, f, x - w * (z - 1) / 2, y - h * (z - 1) / 2, w * z, h * z); ctx.restore();
     if (clip.title) {
       ctx.font = "800 76px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       const lines = wrap(ctx, clip.title, W - 140, true).slice(0, 3), top = H * 0.45 - h / 2 - 60 - (lines.length - 1) * 88;
@@ -204,18 +267,75 @@ function drawFrame(ctx, f, clip, t) {
   }
   if (clip.captions) {
     const c = clip.lines.findLast(c => c.s <= t);
-    if (c && t < c.e + 0.6) caption(ctx, c.text, (t - c.s));
+    if (c && t < c.e + 0.6) caption(ctx, c.text, t - c.s, H * 0.66, clip.pop !== false ? hotWord(c, t) : null);
   }
 }
 
-// The clip's words in caption chunks of up to 3 words, times relative to the clip.
-function lines(clip, from = words) {
+// ---- Following the person -------------------------------------------------------------
+
+// Where the person is across an upright frame, 0 to 1: the middle of their head, from the selfie segmenter on a small
+// copy. The biggest figure wins when there are two; null when no one is there.
+function finder(seg, uw, uh) {
+  const k = 256 / Math.max(uw, uh), work = new OffscreenCanvas(Math.max(16, Math.round(uw * k)), Math.max(16, Math.round(uh * k)));
+  const wctx = work.getContext("2d", { willReadFrequently: true });
+  return f => {
+    put(wctx, f, 0, 0, work.width, work.height);
+    const r = seg.segmentForVideo(work, tick(2)), m = r.confidenceMasks[r.confidenceMasks.length - 1], w = m.width, h = m.height, d = m.getAsFloat32Array();
+    try {
+      const cols = new Float32Array(w); let total = 0;
+      for (let i = 0; i < d.length; i++) if (d[i] > 0.5) { cols[i % w]++; total++; }
+      if (total < w * h * 0.015) return null;
+      // Runs of columns someone is in; the one with the most of them is the person.
+      let best = null, a = -1, sum = 0;
+      for (let x = 0; x <= w; x++) {
+        if (x < w && cols[x] > h * 0.02) { if (a < 0) { a = x; sum = 0; } sum += cols[x]; }
+        else if (a >= 0) { if (!best || sum > best.sum) best = { a, b: x, sum }; a = -1; }
+      }
+      if (!best) return null;
+      // Their head: the top fifth of the frame from the highest point they reach.
+      let top = -1;
+      for (let y = 0; y < h && top < 0; y++) for (let x = best.a; x < best.b; x++) if (d[y * w + x] > 0.5) { top = y; break; }
+      let sx = 0, n = 0;
+      for (let y = top; y < Math.min(h, top + h * 0.2); y++) for (let x = best.a; x < best.b; x++) if (d[y * w + x] > 0.5) { sx += x; n++; }
+      return (n ? sx / n + 0.5 : (best.a + best.b) / 2) / w;
+    } finally { r.close(); }
+  };
+}
+
+let finding = null;
+const finderFor = (s, progress) => (finding ??= getSegmenter(progress, "Loading the person finder (once, about 10 MB)…").catch(e => { finding = null; throw e; }))
+  .then(seg => finder(seg, ...(s.rot % 180 ? [s.height, s.width] : [s.width, s.height])));
+
+// The source frame shown at `at` seconds (the latest at or before it). The caller closes it.
+async function frameAt(at) {
+  let best = null;
+  await decode(src.video, "video", at, at, f => { if (f.timestamp / 1e6 <= at || !best) { best?.close(); best = f; } else f.close(); });
+  return best;
+}
+
+// Is someone in the picture? Asked of three frames; two will do.
+async function someone() {
+  const find = await finderFor(src, (p, msg) => say(msg)).catch(() => null);
+  if (!find) return false;
+  let n = 0;
+  for (const p of [0.25, 0.5, 0.75]) { const f = await frameAt(src.duration * p); if (f) { if (find(f) != null) n++; f.close(); } }
+  return n >= 2;
+}
+
+// Whether a Fill frame has room to move across the source (a wide video does; a phone video doesn't).
+const roomToMove = clip => { const [sw, sh] = src.rot % 180 ? [src.height, src.width] : [src.width, src.height]; return clip.layout === "fill" && sw * Math.max(W / sw, H / sh) - W > 4; };
+
+// The clip's words in caption chunks of up to 3 words, each word with its time, on the clip's own clock (which skips
+// any pauses cut out, when a time map is given).
+function lines(clip, from = words, map = null) {
+  const at = map ? x => map.toOut(x) : x => x - clip.start;
   const ws = from.filter(w => w.s >= clip.start - 0.05 && w.e <= clip.end + 0.3), out = [];
   let cur = null;
   for (const w of ws) {
-    const text = w.w.trim();
-    if (!cur || cur.n >= 3 || (cur.text + " " + text).length > 18 || w.s - clip.start - cur.e > 0.6) out.push(cur = { s: w.s - clip.start, e: w.e - clip.start, text, n: 1 });
-    else { cur.text += " " + text; cur.e = w.e - clip.start; cur.n++; }
+    const text = w.w.trim().replace(/\s+/g, "-"), s = at(w.s), e = Math.max(s + 0.05, at(w.e));
+    if (!text) continue;
+    if (!cur || cur.ws.length >= 3 || (cur.text + " " + text).length > 18 || s - cur.e > 0.6) out.push(cur = { s, e, text, ws: [{ s, e }] });
+    else { cur.text += " " + text; cur.e = e; cur.ws.push({ s, e }); }
   }
   return out;
 }
@@ -223,9 +343,10 @@ function lines(clip, from = words) {
 // ---- Rendering a clip ---------------------------------------------------------------
 
 // The source's sound between start and end, faded in and out, as 48 kHz stereo ready to encode; null if it has none.
-async function sound(s, start, end) {
+// With `keeps`, only those stretches, laid end to end, each join faded over 15 ms so it doesn't click.
+async function sound(s, start, end, keeps = [{ a: start, b: end }]) {
   if (!s.audio) return null;
-  const seconds = end - start, parts = [];
+  const seconds = keeps.reduce((n, k) => n + k.b - k.a, 0), parts = [];
   let rate = 48000, chans = 2;
   await decode(s.audio, "audio", start - 0.5, end + 0.2, data => {
     rate = data.sampleRate; chans = data.numberOfChannels;
@@ -235,35 +356,52 @@ async function sound(s, start, end) {
   if (!parts.length) return null;
   const len = parts.reduce((n, p) => n + p.planes[0].length, 0), buf = new AudioBuffer({ length: len, sampleRate: rate, numberOfChannels: chans });
   let at = 0; for (const p of parts) { p.planes.forEach((pl, c) => buf.copyToChannel(pl, c, at)); at += p.planes[0].length; }
-  const off = new OfflineAudioContext(2, Math.ceil(seconds * 48000), 48000), node = off.createBufferSource(), g = off.createGain();
-  node.buffer = buf;
-  g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(1, 0.1); g.gain.setValueAtTime(1, Math.max(0.1, seconds - 0.25)); g.gain.linearRampToValueAtTime(0, seconds);
-  node.connect(g).connect(off.destination);
-  node.start(0, Math.max(0, start - parts[0].at));
+  const off = new OfflineAudioContext(2, Math.ceil(seconds * 48000), 48000);
+  let o = 0;
+  keeps.forEach((k, i) => {
+    const len = k.b - k.a, node = off.createBufferSource(), g = off.createGain();
+    const fin = Math.min(len / 3, i ? 0.015 : 0.1), fout = Math.min(len / 3, i < keeps.length - 1 ? 0.015 : 0.25);
+    node.buffer = buf;
+    g.gain.setValueAtTime(0, o); g.gain.linearRampToValueAtTime(1, o + fin); g.gain.setValueAtTime(1, o + len - fout); g.gain.linearRampToValueAtTime(0, o + len);
+    node.connect(g).connect(off.destination);
+    node.start(o, Math.max(0, k.a - parts[0].at), len);
+    o += len;
+  });
   return { ...(await pickAudioCodec()), audio: await off.startRendering() };
 }
 
 async function cut(canvas, clip, progress) {
   const { config, mux } = await pickCodec();
-  const ctx = canvas.getContext("2d"), frames = Math.round((clip.end - clip.start) * FPS);
-  clip.lines = lines(clip);
+  const map = mapFor(clip), ctx = canvas.getContext("2d"), frames = Math.round(map.dur * FPS);
+  clip.lines = lines(clip, words, map);
+  const find = roomToMove(clip) ? await finderFor(src, progress).catch(() => null) : null;
   progress(0, "Cutting the sound…");
-  const snd = await sound(src, clip.start, clip.end);
+  const snd = await sound(src, clip.start, clip.end, map.keeps);
   const target = new ArrayBufferTarget();
   const muxer = new Muxer({ target, video: { codec: mux, width: W, height: H, frameRate: FPS },
     ...(snd && { audio: { codec: snd.mux, sampleRate: 48000, numberOfChannels: 2 } }), fastStart: "in-memory" });
   let failed = null, k = 0, prev = null;
   const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => failed = e });
   enc.configure(config);
+  // The aim glides after the person (about half a second to catch up) once they're 5% of the source's width off it,
+  // and jumps at a cut. The person is looked for 4 times a second, and on the first frame after each cut.
+  const cam = { x: null, aim: null, g: -1 }, seen = { x: null, at: -1 };
   const emit = f => {
-    drawFrame(ctx, f, clip, k / FPS);
+    const t = k / FPS, g = map.seg(t);
+    if (find) {
+      if (seen.x != null && (cam.aim == null || g !== cam.g || Math.abs(seen.x - cam.aim) > 0.05)) cam.aim = seen.x;
+      cam.x = cam.x == null || g !== cam.g ? cam.aim ?? 0.5 : cam.x + ((cam.aim ?? cam.x) - cam.x) * 0.06;
+    }
+    cam.g = g;
+    drawFrame(ctx, f, clip, t, { x: find ? cam.x : 0.5, z: g % 2 ? 1.08 : 1 });
     const out = new VideoFrame(canvas, { timestamp: Math.round(k * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
     enc.encode(out, { keyFrame: k % (FPS * 2) === 0 }); out.close(); k++;
   };
-  // Each output frame (30 a second) shows the latest source frame at or before its time.
+  // Each output frame (30 a second) shows the latest source frame at or before its time on the source's clock.
   await decode(src.video, "video", clip.start, clip.end, f => {
     const ts = f.timestamp / 1e6;
-    while (k < frames && clip.start + k / FPS < ts) emit(prev || f);
+    if (find && (ts - seen.at >= 0.25 || map.keeps.some(c => ts >= c.a && seen.at < c.a))) { seen.x = find(f) ?? seen.x; seen.at = ts; }
+    while (k < frames && map.toSrc(k / FPS) < ts) emit(prev || f);
     prev?.close(); prev = f;
   }, async () => {
     if (failed) throw failed;
@@ -283,13 +421,18 @@ async function cut(canvas, clip, progress) {
 }
 
 // For you.js, which lays a creator's video over the page.
-export { open, decode, decoderFor, listen, put, sound, lines };
+export { open, decode, decoderFor, listen, put, sound, lines, pauses, timeMap };
 
+// The preview: a second in, a word being said.
 async function still(canvas, clip) {
-  const at = clip.start + 0.5;
-  let best = null;
-  await decode(src.video, "video", at, at, f => { if (f.timestamp / 1e6 <= at || !best) { best?.close(); best = f; } else f.close(); });
-  if (best) { clip.lines = lines(clip); drawFrame(canvas.getContext("2d"), best, clip, 0.5); best.close(); }
+  const map = mapFor(clip), t = Math.min(1, map.dur / 2), best = await frameAt(map.toSrc(t));
+  if (!best) return;
+  try {
+    clip.lines = lines(clip, words, map);
+    const find = roomToMove(clip) ? await finderFor(src, (p, msg) => say(msg)).catch(() => null) : null;
+    drawFrame(canvas.getContext("2d"), best, clip, t, { x: find?.(best) ?? 0.5, z: 1 });
+    if (find) say("");
+  } finally { best.close(); }
 }
 
 // ---- The page -----------------------------------------------------------------------
@@ -328,7 +471,7 @@ $("clipBtn").onclick = async () => {
   $("clipBtn").disabled = true; $("clipFile").disabled = true;
   try {
     const heard = await listen(src, msg => say(msg));
-    ({ words, segments } = heard);
+    ({ words, segments, env } = heard);
     say("Picking the best moments… (about 10–30 seconds)");
     const { clips } = await call("/api/moments", { segments: heard.segments, duration: src.duration, count: +$("clipCount").value });
     if (!clips.length) throw new Error("No stand-alone moments were found in this video.");
@@ -341,10 +484,13 @@ $("clipBtn").onclick = async () => {
       if (b && words[b[0]].e > c.start + 5) c.end = Math.min(src.duration, words[b[0]].e + 0.35);
     }
     clips.forEach((c, i) => { if (i && c.start < clips[i - 1].end) c.start = clips[i - 1].end; });
+    // A wide video is cropped to follow the person when there is one, and shown whole when not (a screen recording, say).
+    const wide = src.rot % 180 ? src.width < src.height : src.width > src.height;
+    if (wide) say("Looking for a person in the picture…");
+    const layout = !wide || await someone() ? "fill" : "fit";
     say(clips.length < +$("clipCount").value ? `${clips.length} good moment${clips.length === 1 ? "" : "s"} found.` : "");
     cards.length = 0; $("allTicks").replaceChildren(); $("allOut").replaceChildren();
-    const layout = (src.rot % 180 ? src.width < src.height : src.width > src.height) ? "fit" : "fill";
-    const made = clips.map((c, i) => clipCard({ ...c, layout, captions: true, angle: c.title }, i));
+    const made = clips.map((c, i) => clipCard({ ...c, layout, captions: true, pop: true, tight: true, angle: c.title }, i));
     $("videos").replaceChildren(...made.map(m => m.card)); allBox();
     for (const m of made) await m.still();
   } catch (err) { say(err.message, true); }
@@ -364,13 +510,19 @@ function clipCard(v, n) {
   const cap = el("textarea", { value: v.caption, rows: 3, oninput() { v.caption = this.value; } });
   const hashtags = el("input", { type: "text", value: (v.hashtags || []).map(t => "#" + t).join(" "), oninput() { v.hashtags = this.value.split(/[\s,#]+/).filter(Boolean); } });
   const layout = el("select", { onchange() { v.layout = this.value; redraw(); } },
-    el("option", { value: "fit", textContent: "Fit: whole picture, blurred behind", selected: v.layout === "fit" }),
-    el("option", { value: "fill", textContent: "Fill: crop to the middle", selected: v.layout === "fill" }));
-  const caps = el("input", { type: "checkbox", checked: true, onchange() { v.captions = this.checked; redraw(); } });
+    el("option", { value: "fill", textContent: "Fill: crop, following the person", selected: v.layout === "fill" }),
+    el("option", { value: "middle", textContent: "Fill: crop to the middle", selected: v.layout === "middle" }),
+    el("option", { value: "fit", textContent: "Fit: whole picture, blurred behind", selected: v.layout === "fit" }));
+  const gaps = el("span", { className: "small muted" });
+  const tight = el("input", { type: "checkbox", checked: v.tight !== false, onchange() { v.tight = this.checked; redraw(); } });
   const canvas = el("canvas", { width: W, height: H, className: "preview" });
   const state = { v, music: { set() {} }, mp4: null, uploaded: null };
   cards.push(state);
-  const redraw = () => still(canvas, v).catch(() => {});
+  const redraw = () => {
+    const k = pauses(env, words, v.start, v.end);
+    gaps.textContent = !k.saved ? " (none found)" : ` (${k.cut ? `${k.cut} pause${k.cut === 1 ? "" : "s"}` : "the quiet at the ends"}: ${Math.round(v.end - v.start - k.saved)} s instead of ${Math.round(v.end - v.start)} s)`;
+    return still(canvas, v).catch(() => {});
+  };
   const side = sidePanel(canvas);
   const card = el("div", { className: "card" },
     el("div", { className: "vhead" }, el("span", { className: "badge gold", textContent: `Clip ${n + 1}` }), head, span),
@@ -379,7 +531,8 @@ function clipCard(v, n) {
         el("div", { className: "grp", textContent: "The cut" }),
         el("div", { className: "times" }, num("start", "Start (s)"), num("end", "End (s)")),
         el("label", { className: "f" }, "Layout", layout),
-        el("div", { style: "margin-top:12px" }, el("label", { className: "ch" }, caps, "Captions from the words spoken")),
+        captionPick(v, () => redraw()),
+        el("div", { style: "margin-top:12px" }, el("label", { className: "ch" }, tight, "Cut the pauses", gaps)),
         el("div", { className: "grp", textContent: "Post" }),
         el("label", { className: "f" }, "Title (on the clip in Fit, and for YouTube and TikTok)", title),
         el("label", { className: "f" }, "Caption", cap),

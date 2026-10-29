@@ -177,7 +177,7 @@ function videoCard(v, n) {
     el("div", { className: "vhead" }, el("span", { className: "badge gold", textContent: `Video ${n + 1}` }), el("h3", { textContent: v.angle })),
     el("div", { className: "video" },
       el("div", {},
-        el("div", { className: "grp", textContent: "On screen" }), scenes,
+        el("div", { className: "grp", textContent: "On screen" }), scenes, captionPick(v, () => drawStill(canvas, v)),
         el("div", { className: "grp", textContent: "Post" }),
         el("label", { className: "f" }, "Title (YouTube, TikTok)", title),
         el("label", { className: "f" }, "Caption", caption),
@@ -456,7 +456,42 @@ function background(ctx, bmp, t, seed) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 }
 
-function caption(ctx, text, appear, at = H * 0.66) {
+// The word being said in a caption chunk: its index and how long it has been said. A clip's or a take's chunks carry
+// each word's time from the speech-to-text; a link video's text has none, so its chunk's time is shared out by length.
+function hotWord(c, t) {
+  const i = Math.max(0, c.ws.findLastIndex(w => w.s <= t));
+  return { i, age: t - (c.ws[i]?.s ?? c.s) };
+}
+function spread(text, frac, seconds) {
+  const ws = text.split(" "), weight = ws.map(w => w.length + 2), all = weight.reduce((a, b) => a + b, 0);
+  let at = 0, i = 0;
+  while (i < ws.length - 1 && (at + weight[i]) / all <= frac) at += weight[i++];
+  return { i, age: (frac - at / all) * seconds };
+}
+
+// The said word grows to 1.15× as it's said and settles at 1.05× a fifth of a second later.
+const pop = age => 1.05 + 0.10 * Math.max(0, 1 - age / 0.2);
+
+// One line of a caption drawn word by word from x: the word being said (hot.i, counted from `from`) in gold and popped,
+// the rest white. The popped word pushes its neighbours aside; `anchor` 0.5 keeps the line centred on x as it does.
+// Returns where the next line's words start counting.
+function popLine(ctx, line, x, y, from, hot, stroke = 0, anchor = 0) {
+  const space = ctx.measureText(" ").width, ws = line.split(" "), ww = ws.map(w => ctx.measureText(w).width);
+  const z = ws.map((w, j) => from + j === hot.i ? pop(hot.age) : 1), wide = ww.map((w, j) => w * z[j]);
+  x -= anchor * (wide.reduce((a, b) => a + b, 0) - ww.reduce((a, b) => a + b, 0));
+  ctx.textAlign = "left";
+  ws.forEach((w, j) => {
+    ctx.save(); ctx.translate(x + wide[j] / 2, y); ctx.scale(z[j], z[j]);
+    if (stroke) { ctx.lineWidth = stroke; ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.lineJoin = "round"; ctx.strokeText(w, -ww[j] / 2, 0); }
+    ctx.fillStyle = z[j] > 1 ? "#ffd75e" : "#ffffff"; ctx.fillText(w, -ww[j] / 2, 0);
+    ctx.restore();
+    x += wide[j] + space;
+  });
+  return from + ws.length;
+}
+
+// A centred caption. With `hot` ({i, age}) the word being said pops in gold; without, the first line is white and the rest gold.
+function caption(ctx, text, appear, at = H * 0.66, hot = null) {
   const font = s => `800 ${s}px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif`, max = W - 140;
   let size = 104; ctx.font = font(size);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -467,11 +502,23 @@ function caption(ctx, text, appear, at = H * 0.66) {
   const lh = Math.round(size * 1.17), y0 = at - (lines.length - 1) * lh / 2;
   const k = Math.min(1, appear * 6), sc = 0.9 + 0.1 * k;
   ctx.save(); ctx.globalAlpha = k; ctx.translate(W / 2, 0); ctx.scale(sc, sc);
+  let n = 0;
   lines.forEach((l, i) => {
-    ctx.lineWidth = 14; ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.lineJoin = "round"; ctx.strokeText(l, 0, (y0 + i * lh) / sc);
-    ctx.fillStyle = i === 0 ? "#ffffff" : "#ffd75e"; ctx.fillText(l, 0, (y0 + i * lh) / sc);
+    const y = (y0 + i * lh) / sc;
+    if (hot) { n = popLine(ctx, l, -ctx.measureText(l).width / 2, y, n, hot, 14, 0.5); return; }
+    ctx.lineWidth = 14; ctx.strokeStyle = "rgba(0,0,0,0.85)"; ctx.lineJoin = "round"; ctx.strokeText(l, 0, y);
+    ctx.fillStyle = i === 0 ? "#ffffff" : "#ffd75e"; ctx.fillText(l, 0, y);
   });
   ctx.restore();
+}
+
+// How a card shows its captions: the word being said popping (the default), a line at a time, or none.
+function captionPick(v, redraw) {
+  v.captions ??= true; v.pop ??= true;
+  return el("label", { className: "f" }, "Captions", el("select", { onchange() { v.captions = this.value !== "off"; v.pop = this.value === "pop"; redraw(); } },
+    el("option", { value: "pop", textContent: "Word by word: the word being said pops in gold", selected: v.captions && v.pop }),
+    el("option", { value: "line", textContent: "A few words at a time", selected: v.captions && !v.pop }),
+    el("option", { value: "off", textContent: "Off", selected: !v.captions })));
 }
 
 // The largest font size (from max down) at which text fits in width.
@@ -506,8 +553,9 @@ function frame(ctx, v, tl, bmps, t) {
   if (!p) return endCard(ctx, v, (t - (tl.total - END)) / END);
   const local = (t - p.from) / (p.to - p.from);
   background(ctx, bmps[p.i], local, p.i);
-  const cs = chunks(p.s.text), ci = Math.min(cs.length - 1, Math.floor(local * cs.length));
-  caption(ctx, cs[ci], local * cs.length - ci);
+  if (v.captions === false) return;
+  const cs = chunks(p.s.text), u = local * cs.length, ci = Math.min(cs.length - 1, Math.floor(u));
+  caption(ctx, cs[ci], u - ci, H * 0.66, v.pop !== false ? spread(cs[ci], u - ci, (p.to - p.from) / cs.length) : null);
 }
 
 async function drawStill(canvas, v) {
@@ -567,7 +615,7 @@ async function render(canvas, v, progress) {
 
 // Shared with clips.js (long video to clips).
 const currentPage = () => page;
-export { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, currentPage, musicControls, mixAudio, W, H, FPS };
+export { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, captionPick, hotWord, popLine, wrap, currentPage, musicControls, mixAudio, W, H, FPS };
 
 // ---- Make more like this (/make/?like=<kept post>): read its link, and write in its manner ----
 

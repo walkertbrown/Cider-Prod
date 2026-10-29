@@ -2,13 +2,12 @@
 // browser (MediaPipe's selfie segmenter) and laid over the page, which scrolls to what they're saying, with
 // their words as captions. The video stays on the device; only its sound goes out, for the words. The page
 // is photographed once by Cloudflare's browser (/api/shot) and the scroll is planned from the words (/api/scroll).
-import { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, caption, wrap, currentPage, musicControls, mixAudio, W, H, FPS } from "./app.js";
-import { open, decode, decoderFor, listen, put, sound, lines } from "./clips.js";
+import { $, el, call, cards, allBox, sidePanel, pickCodec, pickAudioCodec, encodeAudio, captionPick, hotWord, popLine, wrap, currentPage, musicControls, mixAudio, W, H, FPS } from "./app.js";
+import { open, decode, decoderFor, listen, put, sound, lines, pauses, timeMap } from "./clips.js";
+import { getSegmenter, tick } from "./seg.js";
 import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs";
 
 const MAX_SECONDS = 90, VIEW = 844; // the phone window the page was photographed through, in CSS px
-const VISION = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0";
-const MODEL = "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite";
 const WORK = 512; // the frame is shrunk to this on its long side for the cutout; the model looks at 256 anyway
 const FONT = "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
 
@@ -160,7 +159,7 @@ $("youBtn").onclick = async () => {
     const plan = await call("/api/scroll", { segments: heard.segments, elements: shot.elements, height, page: { title: page.title, host: page.host }, duration: end })
       .catch(e => ({ note: e.message, keyframes: [{ t: 0, y: 0 }, { t: end, y: Math.min(Math.max(0, height - VIEW), 70 * end) }], title: page.title || "", caption: "", hashtags: [] }));
     const v = { angle: "You, over the page", title: plan.title || page.title || "", caption: plan.caption, hashtags: plan.hashtags, scenes: [], page,
-      end, layout: "cutout", captions: true, keyframes: plan.keyframes, words: heard.words, shot: { img, height, width: shot.width || 390 } };
+      end, layout: "cutout", captions: true, pop: true, tight: true, keyframes: plan.keyframes, words: heard.words, env: heard.env, shot: { img, height, width: shot.width || 390 } };
     cards.length = 0; $("videos").replaceChildren(); $("allTicks").replaceChildren(); $("allOut").replaceChildren();
     const made = youCard(v, src, plan.note);
     $("videos").replaceChildren(made.card); allBox(); say("");
@@ -179,13 +178,18 @@ function youCard(v, s, note) {
     el("option", { value: "cutout", textContent: "Cutout: you, over the page" }),
     el("option", { value: "bubble", textContent: "Bubble: you in a circle, bottom left" }),
     el("option", { value: "split", textContent: "Split: the page above, you below" }));
-  const caps = el("input", { type: "checkbox", checked: true, onchange() { v.captions = this.checked; redraw(); } });
+  const gaps = el("span", { className: "small muted" });
+  const tight = el("input", { type: "checkbox", checked: v.tight !== false, onchange() { v.tight = this.checked; redraw(); } });
   const stops = v.keyframes.length - 1, taps = v.keyframes.filter(k => k.tap).length;
   const canvas = el("canvas", { width: W, height: H, className: "preview" });
   const music = musicControls(v);
   const state = { v, music, mp4: null, uploaded: null };
   cards.push(state);
-  const redraw = () => still(canvas, v, s).catch(e => say(e.message, true));
+  const redraw = () => {
+    const k = pauses(v.env, v.words, 0, v.end);
+    gaps.textContent = !k.saved ? " (none found)" : ` (${k.cut ? `${k.cut} pause${k.cut === 1 ? "" : "s"}` : "the quiet at the ends"}: ${Math.round(v.end - k.saved)} s instead of ${Math.round(v.end)} s)`;
+    return still(canvas, v, s).catch(e => say(e.message, true));
+  };
   const side = sidePanel(canvas);
   const card = el("div", { className: "card" },
     el("div", { className: "vhead" }, el("span", { className: "badge gold", textContent: "You" }), head, el("span", { className: "small muted", textContent: `${Math.round(v.end)} s · ${v.page.host}` })),
@@ -193,7 +197,8 @@ function youCard(v, s, note) {
       el("div", {}, ...(note ? [el("p", { className: "note bad", textContent: note })] : []),
         el("div", { className: "grp", textContent: "The look" }),
         el("label", { className: "f" }, "Layout", layout),
-        el("div", { style: "margin-top:12px" }, el("label", { className: "ch" }, caps, "Captions from your words")),
+        captionPick(v, () => redraw()),
+        el("div", { style: "margin-top:12px" }, el("label", { className: "ch" }, tight, "Cut the pauses", gaps)),
         el("p", { className: "note", textContent: `The page scrolls to ${stops} place${stops === 1 ? "" : "s"} as you talk about them${taps ? `, and a pointer presses ${taps === 1 ? "the button you say to press" : `the ${taps} buttons you say to press`}` : ""}. Rendering reads your video again and cuts you out frame by frame, so give it a minute or two.` }),
         music.box,
         el("div", { className: "grp", textContent: "Post" }),
@@ -208,25 +213,6 @@ function youCard(v, s, note) {
 }
 
 // ---- The cutout ------------------------------------------------------------------------
-
-let segmenter = null, segAt = 0; // one segmenter for the page; its clock only goes forward
-
-async function getSegmenter(progress) {
-  if (segmenter) return segmenter;
-  progress(0, "Loading the cutout model (once, about 10 MB)…");
-  const { FilesetResolver, ImageSegmenter } = await import(`${VISION}/vision_bundle.mjs`);
-  const vision = await FilesetResolver.forVisionTasks(`${VISION}/wasm`);
-  const make = delegate => ImageSegmenter.createFromOptions(vision, { baseOptions: { modelAssetPath: MODEL, delegate }, runningMode: "VIDEO", outputConfidenceMasks: true, outputCategoryMask: false });
-  // The graphics card when it's quick, else the processor: on some machines the GPU path is slow to read back.
-  let seg = await make("GPU").catch(() => null);
-  if (seg) {
-    const probe = new OffscreenCanvas(288, 512);
-    const trial = () => { const t = performance.now(), r = seg.segmentForVideo(probe, segAt += 2); r.confidenceMasks[0].getAsFloat32Array(); r.close(); return performance.now() - t; };
-    trial(); if (trial() > 80) { seg.close(); seg = null; }
-  }
-  segmenter = seg || await make("CPU");
-  return segmenter;
-}
 
 // Cuts the person out of each upright frame: a soft mask from the model, run again on a crop around them when
 // they're small in the frame, steadied with the last mask, and applied with a blurred edge. Keeps the box around them.
@@ -258,7 +244,7 @@ function cutter(seg, uw, uh) {
       if (box && ts - lastAt < 0.045) { apply(f, rot); return true; }
       lastAt = ts;
       put(wctx, f, 0, 0, ww, wh, rot);
-      let { f: m, w, h } = confidence(work, segAt += 2);
+      let { f: m, w, h } = confidence(work, tick(2));
       const first = extent(m, w, h, 0.5);
       if (!first) { box = null; last = null; return false; }
       const [x0, y0, x1, y1] = first;
@@ -267,7 +253,7 @@ function cutter(seg, uw, uh) {
         const cx = Math.max(0, Math.floor(x0 - px)), cy = Math.max(0, Math.floor(y0 - py));
         const cw = Math.min(w - cx, Math.ceil(x1 - x0 + 2 * px)), ch = Math.min(h - cy, Math.ceil(y1 - y0 + 2 * py));
         const crop = new OffscreenCanvas(cw, ch); crop.getContext("2d").drawImage(work, cx * ww / w, cy * wh / h, cw * ww / w, ch * wh / h, 0, 0, cw, ch);
-        const c = confidence(crop, segAt += 1);
+        const c = confidence(crop, tick(1));
         m = new Float32Array(w * h);
         for (let yy = 0; yy < Math.min(ch, c.h); yy++) for (let xx = 0; xx < Math.min(cw, c.w); xx++) m[(cy + yy) * w + cx + xx] = c.f[yy * c.w + xx];
       }
@@ -386,22 +372,28 @@ function pageWindow(ctx, v, t, rect, radius) {
   return { k, off };
 }
 
-// Captions in a dark box beside the person: left-aligned, anchored to the bottom, between x0 and x1.
-function captionBox(ctx, text, appear, x0, x1, bottom) {
-  const maxW = x1 - x0 - 56, font = s => `800 ${s}px ${FONT}`, widest = ls => Math.max(...ls.map(l => ctx.measureText(l).width));
+// Captions in a dark box beside the person: left-aligned, anchored to the bottom, between x0 and x1. With `hot`, the
+// word being said pops in gold.
+function captionBox(ctx, text, appear, x0, x1, bottom, hot = null) {
+  // A popped word takes more room, so the box keeps some spare.
+  const room = hot ? 36 : 0, maxW = x1 - x0 - 56 - room, font = s => `800 ${s}px ${FONT}`, widest = ls => Math.max(...ls.map(l => ctx.measureText(l).width));
   let size = 72; ctx.font = font(size); ctx.textAlign = "left"; ctx.textBaseline = "middle";
   let lines = wrap(ctx, text.toUpperCase(), maxW, true), w = widest(lines);
   if (w > maxW) { size = Math.max(36, Math.floor(size * maxW / w)); ctx.font = font(size); lines = wrap(ctx, text.toUpperCase(), maxW, true); w = widest(lines); }
-  const lh = Math.round(size * 1.2), bw = Math.min(maxW, w) + 56, bh = lines.length * lh + 36, k = Math.min(1, appear * 6), top = bottom - bh;
+  const lh = Math.round(size * 1.2), bw = Math.min(maxW, w) + 56 + room, bh = lines.length * lh + 36, k = Math.min(1, appear * 6), top = bottom - bh;
   ctx.save(); ctx.globalAlpha = k; ctx.translate(0, (1 - k) * 14);
   ctx.fillStyle = "rgba(12,12,14,0.8)"; ctx.beginPath(); ctx.roundRect(x0, top, bw, bh, 20); ctx.fill();
-  lines.forEach((l, i) => { ctx.fillStyle = i === 0 ? "#fff" : "#ffd75e"; ctx.fillText(l, x0 + 28, top + 18 + lh * (i + 0.5), maxW); });
+  let n = 0;
+  lines.forEach((l, i) => {
+    if (hot) { n = popLine(ctx, l, x0 + 28, top + 18 + lh * (i + 0.5), n, hot); return; }
+    ctx.fillStyle = i === 0 ? "#fff" : "#ffd75e"; ctx.fillText(l, x0 + 28, top + 18 + lh * (i + 0.5), maxW);
+  });
   ctx.restore();
 }
 
 function drawFrame(ctx, v, s, f, cut, has, t, smooth) {
   const [uw, uh] = upright(s), host = v.page.host || "", line = v.captions && v.lines.findLast(c => c.s <= t);
-  const showing = line && t < line.e + 0.6 ? line : null;
+  const showing = line && t < line.e + 0.6 ? line : null, hot = showing && v.pop !== false ? hotWord(showing, t) : null;
   if (v.layout === "split") {
     // A dark bar with the site's name, the page under it to 60%, the person below. A portrait clip is shown from near
     // its top, where the face is; a landscape one fills the band.
@@ -411,7 +403,7 @@ function drawFrame(ctx, v, s, f, cut, has, t, smooth) {
     ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, H - top); ctx.clip(); put(ctx, f, (W - uw * kk) / 2, dy, uw * kk, uh * kk, s.rot); ctx.restore();
     pointer(ctx, v, t, rect, k, off);
     pill(ctx, host);
-    if (showing) captionBox(ctx, showing.text, t - showing.s, 40, W - 40, H - 190); // over the chest, not the face
+    if (showing) captionBox(ctx, showing.text, t - showing.s, 40, W - 40, H - 190, hot); // over the chest, not the face
     return;
   }
   ctx.drawImage(backdrop(v), 0, 0);
@@ -434,33 +426,41 @@ function drawFrame(ctx, v, s, f, cut, has, t, smooth) {
   }
   pointer(ctx, v, t, FRAME, k, off);
   pill(ctx, host);
-  if (showing) captionBox(ctx, showing.text, t - showing.s, x0, x1, H - 190); // above where TikTok's own overlay sits
+  if (showing) captionBox(ctx, showing.text, t - showing.s, x0, x1, H - 190, hot); // above where TikTok's own overlay sits
 }
 
 // ---- Rendering --------------------------------------------------------------------------
 
+// The take on its own clock once the pauses are cut: the time map, and the video with its scroll stops and captions moved
+// to match. Without cutting, the map is one stretch and nothing moves.
+function timed(v) {
+  const map = timeMap(v.tight === false ? [{ a: 0, b: v.end }] : pauses(v.env, v.words, 0, v.end));
+  let last = -1;
+  const keyframes = v.keyframes.map(k => { const t = Math.max(map.toOut(k.t), last + 0.05); last = t; return { ...k, t }; });
+  return { map, view: { ...v, keyframes, lines: lines({ start: 0, end: v.end }, v.words, map) } };
+}
+
 async function still(canvas, v, s) {
   // The preview shows the first press if there is one, else a moment a few seconds in, when the page has scrolled.
-  const tap = v.keyframes.find(k => k.tap), at = Math.max(0.5, Math.min(v.end - 0.5, tap ? tap.t + 0.3 : Math.min(v.end / 2, 5)));
+  const { map, view } = timed(v), tap = view.keyframes.find(k => k.tap);
+  const t = Math.max(0.5, Math.min(map.dur - 0.5, tap ? tap.t + 0.3 : Math.min(map.dur / 2, 5))), at = map.toSrc(t);
   let best = null;
   await decode(s.video, "video", at, at, f => { if (f.timestamp / 1e6 <= at || !best) { best?.close(); best = f; } else f.close(); });
   if (!best) return;
   try {
-    v.lines = lines({ start: 0, end: v.end }, v.words);
     let cut = null, has = false;
     if (v.layout === "cutout") { cut = await cutterFor(s, (p, msg) => say(msg)); has = cut.cut(best, s.rot, at); say(""); }
-    drawFrame(canvas.getContext("2d"), v, s, best, cut, has, at, {});
+    drawFrame(canvas.getContext("2d"), view, s, best, cut, has, t, {});
   } finally { best.close(); }
 }
 
 async function make(canvas, v, s, progress) {
   const { config, mux } = await pickCodec();
-  const ctx = canvas.getContext("2d"), frames = Math.round(v.end * FPS), smooth = {};
-  v.lines = lines({ start: 0, end: v.end }, v.words);
+  const { map, view } = timed(v), ctx = canvas.getContext("2d"), frames = Math.round(map.dur * FPS), smooth = {};
   const cut = v.layout === "cutout" ? await cutterFor(s, progress) : null;
   progress(0, "Cutting the sound…");
-  let snd = await sound(s, 0, v.end);
-  if (v.music) snd = { ...(snd || await pickAudioCodec()), audio: await mixAudio(v.music, v.end, snd ? [{ buffer: snd.audio, at: 0 }] : []) };
+  let snd = await sound(s, 0, v.end, map.keeps);
+  if (v.music) snd = { ...(snd || await pickAudioCodec()), audio: await mixAudio(v.music, map.dur, snd ? [{ buffer: snd.audio, at: 0 }] : []) };
   const target = new ArrayBufferTarget();
   const muxer = new Muxer({ target, video: { codec: mux, width: W, height: H, frameRate: FPS },
     ...(snd && { audio: { codec: snd.mux, sampleRate: 48000, numberOfChannels: 2 } }), fastStart: "in-memory" });
@@ -468,16 +468,17 @@ async function make(canvas, v, s, progress) {
   const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => failed = e });
   enc.configure(config);
   const emit = () => {
-    drawFrame(ctx, v, s, prev, cut, has, k / FPS, smooth);
+    drawFrame(ctx, view, s, prev, cut, has, k / FPS, smooth);
     const out = new VideoFrame(canvas, { timestamp: Math.round(k * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
     enc.encode(out, { keyFrame: k % (FPS * 2) === 0 }); out.close(); k++;
   };
   const take = f => { prev?.close(); prev = f; if (cut) has = cut.cut(f, s.rot, f.timestamp / 1e6); };
-  // Each source frame is cut out once; each output frame (30 a second) shows the latest source frame at or before its time.
+  // Each source frame is cut out once; each output frame (30 a second) shows the latest source frame at or before its
+  // time on the source's clock.
   await decode(s.video, "video", 0, v.end, f => {
     const ts = f.timestamp / 1e6;
     if (!prev) take(f);
-    while (k < frames && k / FPS < ts) emit();
+    while (k < frames && map.toSrc(k / FPS) < ts) emit();
     if (prev !== f) take(f);
   }, async () => {
     if (failed) throw failed;

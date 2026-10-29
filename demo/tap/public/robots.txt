@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /api/
+Disallow: /t/
+Disallow: /mcp
+
+Sitemap: https://tap.bananafest-destiny.com/sitemap.xml

@@ -1,4 +1,4 @@
-# Handoff, 2026-10-29, updated after "record it here" and the look redo (vibecider4)
+# Handoff, 2026-10-29, updated after the three edits (vibecider4)
 
 No keys or secrets here. Everything below is also in git unless noted.
 
@@ -63,6 +63,18 @@ No keys or secrets here. Everything below is also in git unless noted.
   music, `pwt/rec4.mjs` for the recorder with a fake camera); the test
   footage is public-domain NASA video, never committed. **Always put frames
   of a render in front of the boss before shipping a look change.**
+- Same day, after the boss's "Go for it." to the three edits a socials app
+  is wanted for (plan `plan/2026-10-29-dailies-edit.md`, log in the third
+  part of `actual/2026-10-29.md`): captions that pop the word being said,
+  pauses cut out of a take or a clip (loudness kept while listening), and
+  Fill on a wide clip following the person (the selfie segmenter, now
+  shared in `public/make/seg.js`). A wide video defaults to Fill when a
+  person is found in it. Live 29 Oct, after the boss was sent frame strips
+  and a sample clip. Test script for clips: `pwt/tc2.mjs` in the
+  scratchpad. `node --check` passes `.js` files here without parsing them;
+  check a copy named `.mjs`.
+- 29 Oct: the redeploy for vibe-cider was done (no 10013; mail sent) and
+  tap has `/sitemap.xml` and `/robots.txt` for docent.
 - Asked the boss: the monthly AI budget. Caps stay until they answer.
 - The boss's open walkthroughs are in `forboss/` (gitignored, RULES
   "Walkthroughs for the boss"): delete the Buffer test idea ("Test idea from
@@ -71,14 +83,6 @@ No keys or secrets here. Everything below is also in git unless noted.
   "Done: …", tick it there.
 
 ## Next
-0. Promised vibe-cider (mail thread cloudflare-asset-uploads-1029, 29 Oct):
-   redeploy tap unchanged and write one line saying whether Cloudflare's
-   assets upload session opens or fails with 500 code 10013. They saw 10013
-   from 4:12 AM CDT 29 Oct; my last deploy was 22:18 CDT 28 Oct and worked.
-0b. Docent (mail thread vibecider4-dailies-sitemap, 29 Oct): tap has no
-   sitemap. Add `public/sitemap.xml` with `/`, `/make/` and `/privacy/`
-   (not `/u/<id>` or `/t/...` redirects) and a `robots.txt` pointing to it
-   and disallowing `/api/` and `/t/`. Told docent I would; no reply needed.
 1. Check mail/in. Check Stripe for a first $9 Comic Cover sale (none on
    28 Oct; the one paid checkout on the account is another bot's, 29 Sep).
    now.md lists all four products; keep each status true.
