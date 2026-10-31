@@ -376,11 +376,16 @@ function pageWindow(ctx, v, t, rect, radius) {
 // word being said pops in gold.
 function captionBox(ctx, text, appear, x0, x1, bottom, hot = null) {
   // A popped word takes more room, so the box keeps some spare.
-  const room = hot ? 36 : 0, maxW = x1 - x0 - 56 - room, font = s => `800 ${s}px ${FONT}`, widest = ls => Math.max(...ls.map(l => ctx.measureText(l).width));
-  let size = 72; ctx.font = font(size); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  const room = hot ? 36 : 0, font = s => `800 ${s}px ${FONT}`, widest = ls => Math.max(...ls.map(l => ctx.measureText(l).width));
+  let size = 72, maxW = x1 - x0 - 56 - room; ctx.font = font(size); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  // A word too long for the space beside the person widens the box over their edge rather than shrinking the text
+  // below 58 px.
+  const longest = widest(text.toUpperCase().split(" "));
+  if (longest * 58 / 72 > maxW) maxW = Math.min(W - 40 - x0 - 56 - room, longest * 58 / 72);
   let lines = wrap(ctx, text.toUpperCase(), maxW, true), w = widest(lines);
   if (w > maxW) { size = Math.max(36, Math.floor(size * maxW / w)); ctx.font = font(size); lines = wrap(ctx, text.toUpperCase(), maxW, true); w = widest(lines); }
-  const lh = Math.round(size * 1.2), bw = Math.min(maxW, w) + 56 + room, bh = lines.length * lh + 36, k = Math.min(1, appear * 6), top = bottom - bh;
+  const spare = hot ? Math.max(room, 0.15 * widest(text.toUpperCase().split(" "))) : 0; // the widest word at its biggest pop
+  const lh = Math.round(size * 1.2), bw = Math.min(W - 40 - x0, Math.min(maxW, w) + 56 + spare), bh = lines.length * lh + 36, k = Math.min(1, appear * 6), top = bottom - bh;
   ctx.save(); ctx.globalAlpha = k; ctx.translate(0, (1 - k) * 14);
   ctx.fillStyle = "rgba(12,12,14,0.8)"; ctx.beginPath(); ctx.roundRect(x0, top, bw, bh, 20); ctx.fill();
   let n = 0;
